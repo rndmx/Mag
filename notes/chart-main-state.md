@@ -1,0 +1,16 @@
+# ChartMain state (assembly agent, 2026-11-06)
+Compile: scratchpad/cma/k.sh Module (overlay cma/ov: hard links; AlgMag + StacksFrontier unions; output cma/ov/AlgMag).
+10:24 AlgMag/ChartMain.lean: effective_of_lft, equivariantEffectivity_of_lft compile (Thm 4.1 existence, X sep, lft, qc, S affine f.t./Z).
+10:31 chartLemmaFG_of_section5 being finished in ChartMain.lean (hypothesis Section5FromEffectivity)
+10:42 COMPILED: ChartMain.lean chartLemmaStatementFG_of_section5 (named hypothesis Section5FromEffectivity), effective_of_lft, equivariantEffectivity_of_lft, exists_orbit_data; ChartThm68.lean thm68_ii, thm11_ft_final, closedPointsDetectCovers_of_ft, qc_of_ft, decent_of_sep, jacobson_of_ft. Walker: scratchpad/cma/stubsrc/CmaW.lean via cma/ks.sh CmaW. New stub: cma/stubsrc/.../JacobsonPointSpace.lean.
+10:50 next: ChartFormal.lean bridge: tower -> T=Spec C, complete pair, phi from effectivity (time-boxed)
+11:03 ChartFormal.lean in progress: Spec C object, grading, truncation maps; must end sorry-free or be trimmed
+11:12 ChartFormal.lean trimmed to what compiles: Spec C in the site (contains_specC), actTob, mTob, aRing. Blocker: aMap and gTrunc_rhoC time out on isDefEq (unfolding C through toThickeningSystem). Remaining plan: a_n via toAffine, compat via ev_surj, EquivAlong via appTop_smul_of_mem, then EquivariantEffectivity gives Spec C -> X.
+11:23 ChartFormal.lean (sorry-free, compiled through aMap; reverted aMap_appTop, which exceeded 175 s). Compile times 3+ min. To do: aMap_appTop, J maps U n -> U l, compat by ev_surj, EquivAlong by appTop_smul_of_mem, complete pair by lemma_3_2 + of_surjective, apply EquivariantEffectivity. Section5FromEffectivity still a hypothesis.
+11:55 ChartFormalC.lean (abstract CTower, no unfolding of C): lift, sn, pt, exists_phi (Thm 4.1 application), phi_app, sn_phi, hMono, isIso_trunc, trunc_phi. Next: ChartFormal2.lean instantiation + exists_section5_input.
+12:10 COMPILED ChartFormal2.lean exists_section5_input + structure Section5Input (axioms clean, no stubs). ChartFormalC.lean abstract layer. Next: stubs chart V + ArtinApproxFP.
+12:40 DONE bridge: ChartFormal2.exists_section5_input (structure Section5Input; axioms clean; q.c. not needed). ChartArtinFP.artinApproxFP (sorry only via overlay stubs 0CAR, 07PV, 07PX). Stub exists_chart_at_point in cma/stubsrc/AlgMag/ChartStubs.lean. Remaining for Section5FromEffectivity: section5Output_of_input (Plan A) must consume Section5Input; 0BBP -> exists_chart_at_point not formalized; repo ChartArtin.lean needs 2 proof fixes (REQUIRES_FULL_STACKS.md).
+
+13:15 (final assembly) AlgMag/ChartStubs.lean now in the repo with real proofs: exists_chart_at_point (from 0BBP stub), limitPreserving_of_lft (06G4(1) stub + 05N0). Stubs in cma/stubsrc/StacksFrontier/.../Spaces/Decent/AffineElementaryEtaleNeighborhood.lean, .../Morphisms/FinitePresentation.lean. Real compile into overlay with cma/kr.sh: Decent/ElementaryEtaleNeighborhood, Decent/ResidueField, Decent/EtaleChartNeighborhood, Decent/PresheafPointTransport, PointsAndCoverings/MonomorphismPoints. ChartArtin fixes applied in the repo. Next: ChartFinal, clean rebuild, walker.
+
+18:07 DONE: chartLemma, thm68, thm11_ft (ChartFinal.lean), thm68_family_spaces, thm68_qc_spaces, thm11_affine_spaces (ChartFinalSpaces.lean). Clean overlay rebuild; sorryAx only through the stubs of notes/chart-stubs.md.

@@ -1,0 +1,693 @@
+/-
+Copyright (c) 2026 The Tau Ceti contributors. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: The Tau Ceti contributors
+Adapted from Tau Ceti (github.com/TauCetiProject/TauCeti, commit d2083f0); see TauCeti/CHANGES.md
+-/
+
+import TauCeti.Compat.All
+import Mathlib.LinearAlgebra.Basis.VectorSpace
+import TauCeti.Algebra.Coalgebra.Comodule.Fixed
+import TauCeti.Algebra.Coalgebra.Comodule.MonoidAlgebra.Basic
+import TauCeti.Algebra.Coalgebra.Subcomodule.Corestrict
+import TauCeti.Algebra.Coalgebra.Subcomodule.Lattice
+import TauCeti.Algebra.Coalgebra.Subcomodule.Projection
+import TauCeti.Algebra.Coalgebra.Subcomodule.Transport
+import TauCeti.Algebra.Coalgebra.Subcomodule.Comap
+import TauCeti.Algebra.Coalgebra.Subcomodule.Finite
+
+/-!
+# Complete reducibility and linear reductivity
+
+An affine group over a field is linearly reductive when every finite-dimensional rational
+representation is completely reducible. On coordinate rings, rational representations are
+comodules, and complete reducibility says that every subcomodule has a subcomodule complement.
+
+This file introduces that intrinsic comodule formulation, proves that complete reducibility is
+invariant under corestriction along a coalgebra equivalence, and proves linear reductivity for
+every monoid-algebra coalgebra `k[G]`. The last proof makes an arbitrary linear projection onto a
+subcomodule equivariant: decompose a vector into its weights, apply the projection separately on
+each weight, and project the result back to that weight. The resulting idempotent comodule
+endomorphism has the original subcomodule as its range, so its kernel is an invariant complement.
+
+Complete reducibility also turns a supply of fixed vectors into fixedness of the whole comodule:
+if every nonzero subcomodule of `V` contains a nonzero fixed vector, then a subcomodule
+complement of `TauCeti.Comodule.fixedSubcomodule` can contain no nonzero fixed vector, hence is
+zero, hence every vector of `V` is fixed. Kolchin's theorem supplies such vectors for a unipotent
+group, so this is the step that makes a linearly reductive unipotent group act trivially.
+
+Linear reductivity only asks for complete reducibility of finite-dimensional comodules, but over
+a linearly reductive coalgebra **every** comodule is completely reducible, and is the sum of its
+simple subcomodules. The passage from finite to arbitrary comodules is the usual statement that a
+sum of semisimple modules is semisimple, following Mathlib's
+`complementedLattice_of_sSup_atoms_eq_top`, together with the fact that over a field every
+comodule is the sum of its finite-dimensional subcomodules. In particular this applies to the
+regular comodule of a linearly reductive coalgebra, which is therefore the sum of its simple right
+coideals; this is the starting point of the cosemisimple coefficient decomposition.
+
+For an abelian group `G`, `k[G]` is the coordinate Hopf algebra of the diagonalizable group `D(G)`.
+Thus every diagonalizable group, and in particular every split torus, is linearly reductive over an
+arbitrary field.
+
+## Main declarations
+
+* `TauCeti.Comodule.IsCompletelyReducible`: every subcomodule has a subcomodule complement.
+* `TauCeti.Comodule.IsCompletelyReducible.of_exists_isCompl` and
+  `TauCeti.Comodule.IsCompletelyReducible.exists_isCompl`: construct and use complete
+  reducibility through complementary subcomodules.
+* `TauCeti.Subcomodule.projection`: the projection onto a subcomodule along a complementary
+  subcomodule, as a comodule endomorphism.
+* `TauCeti.Comodule.isCompletelyReducible_iff_forall_exists_hom`: complete reducibility means
+  that every subcomodule is the image of a comodule endomorphism fixing it pointwise.
+* `TauCeti.Comodule.isCompletelyReducible_of_forall_eq_bot_or_eq_top`: a comodule with no
+  subcomodules other than `⊥` and `⊤` is completely reducible, whence
+  `TauCeti.Comodule.isCompletelyReducible_of_subsingleton` and
+  `TauCeti.Comodule.isCompletelyReducible_of_isSimpleOrder`: subsingleton and simple comodules
+  are completely reducible.
+* `TauCeti.Comodule.fixedSubcomodule_eq_top_of_isCompletelyReducible_of_forall_exists_fixed` and
+  `TauCeti.Comodule.coact_eq_tmul_one_of_isCompletelyReducible_of_forall_exists_fixed`: a
+  completely reducible comodule all of whose nonzero subcomodules contain nonzero fixed vectors
+  is fixed.
+* `TauCeti.Comodule.isCompletelyReducible_of_orderIso`: transfer complete reducibility across
+  compatible order isomorphisms of subcomodules and underlying submodules.
+* `TauCeti.Comodule.isCompletelyReducible_transport_iff`: complete reducibility is invariant
+  under transport along a linear equivalence.
+* `TauCeti.Coalgebra.IsLinearlyReductive`: every finite-dimensional comodule is completely
+  reducible, with constructor
+  `TauCeti.Coalgebra.IsLinearlyReductive.of_forall_isCompletelyReducible`.
+* `TauCeti.Coalgebra.IsLinearlyReductive.isCompletelyReducible_sameUniverse`: use linear
+  reductivity for a comodule in the carrier universe named by the hypothesis.
+* `TauCeti.Coalgebra.IsLinearlyReductive.isCompletelyReducible`: **every comodule over a
+  linearly reductive coalgebra is completely reducible**, in every carrier universe and with no
+  finiteness assumption, and `TauCeti.Coalgebra.IsLinearlyReductive.sSup_atoms_eq_top`: it is
+  the sum of its simple subcomodules.
+* `TauCeti.Comodule.isCompletelyReducible_corestrict_iff_of_split`: complete reducibility is
+  unchanged by corestriction along a coalgebra morphism with a linear retraction, in particular
+  along a coalgebra equivalence.
+* `TauCeti.Coalgebra.isLinearlyReductive_iff_of_coalgEquiv`: linear reductivity is invariant
+  under a coalgebra equivalence.
+* `TauCeti.Comodule.isCompletelyReducible_of_sSup_eq_top`: over a commutative ring and a flat
+  coalgebra, a comodule which is the supremum of completely reducible subcomodules is completely
+  reducible.
+* `TauCeti.Subcomodule.isCompletelyReducible_of_isAtom`: a simple subcomodule is completely
+  reducible.
+* `TauCeti.Comodule.isCompletelyReducible_of_forall_finite`: for a free coefficient coalgebra,
+  a comodule is completely reducible as soon as its finite subcomodules are.
+* `TauCeti.Comodule.isCompletelyReducible_iff_sSup_atoms_eq_top`: over a field, a comodule is
+  completely reducible exactly when it is the sum of its simple subcomodules.
+* `TauCeti.Coalgebra.isLinearlyReductive_monoidAlgebra`: monoid-algebra coalgebras are linearly
+  reductive over a field.
+
+## References
+
+* W. C. Waterhouse, *Introduction to Affine Group Schemes*, Section 3.2.
+* J. S. Milne, *Algebraic Groups* (2017), Theorem 12.12.
+* M. Sweedler, *Hopf Algebras* (1969), on cosemisimple coalgebras.
+-/
+
+section
+
+open scoped TensorProduct
+
+namespace TauCeti
+
+universe u v w
+
+namespace Comodule
+
+variable (k : Type u) (C : Type v) (V : Type w)
+variable [CommSemiring k]
+variable [AddCommMonoid C] [Module k C] [Coalgebra k C]
+variable [AddCommMonoid V] [Module k V] [Comodule k C V]
+
+/-- A comodule is completely reducible when each subcomodule has a complementary subcomodule.
+
+The complement is taken in the lattice of underlying submodules, so the statement says
+both that the two subcomodules intersect trivially and that together they span the whole
+comodule. -/
+def IsCompletelyReducible : Prop :=
+  ∀ W : Subcomodule k C V, ∃ Q : Subcomodule k C V,
+    IsCompl W.toSubmodule Q.toSubmodule
+
+variable {k C V}
+
+/-- Construct complete reducibility by supplying a complementary subcomodule for every
+subcomodule. -/
+theorem IsCompletelyReducible.of_exists_isCompl
+    (h : ∀ W : Subcomodule k C V, ∃ Q : Subcomodule k C V,
+      IsCompl W.toSubmodule Q.toSubmodule) :
+    IsCompletelyReducible k C V :=
+  h
+
+/-- The subcomodule complement supplied by complete reducibility.
+
+`TauCeti.Comodule.IsCompletelyReducible` is a definition, so its body is not available outside
+this file; this is the accessor that unfolds it. -/
+theorem IsCompletelyReducible.exists_isCompl (h : IsCompletelyReducible k C V)
+    (W : Subcomodule k C V) :
+    ∃ Q : Subcomodule k C V, IsCompl W.toSubmodule Q.toSubmodule :=
+  h W
+
+/-- **A comodule with no subcomodules except `⊥` and `⊤` is completely reducible**: each of the
+two is complemented by the other.
+
+This is the common content of the two criteria below. Note that it is weaker than
+`IsSimpleOrder (Subcomodule k C V)`, which additionally requires `⊥ ≠ ⊤`, and so covers the
+subsingleton case as well. -/
+theorem isCompletelyReducible_of_forall_eq_bot_or_eq_top
+    (h : ∀ W : Subcomodule k C V, W = ⊥ ∨ W = ⊤) : IsCompletelyReducible k C V :=
+  IsCompletelyReducible.of_exists_isCompl fun W ↦ (h W).elim
+    (fun hW ↦ ⟨⊤, by
+      simpa [hW] using (isCompl_bot_top : IsCompl (⊥ : Submodule k V) ⊤)⟩)
+    (fun hW ↦ ⟨⊥, by
+      simpa [hW] using (isCompl_top_bot : IsCompl (⊤ : Submodule k V) ⊥)⟩)
+
+/-- A comodule on a subsingleton module is completely reducible. -/
+theorem isCompletelyReducible_of_subsingleton [Subsingleton V] :
+    IsCompletelyReducible k C V :=
+  isCompletelyReducible_of_forall_eq_bot_or_eq_top fun W ↦ Or.inl <| by
+    ext m
+    constructor
+    · intro _
+      rw [Subcomodule.mem_bot]
+      exact Subsingleton.elim _ _
+    · intro hm
+      exact (Subcomodule.mem_bot.mp hm) ▸ zero_mem W
+
+/-- A comodule whose subcomodule lattice is simple is completely reducible. -/
+theorem isCompletelyReducible_of_isSimpleOrder
+    [IsSimpleOrder (Subcomodule k C V)] : IsCompletelyReducible k C V :=
+  isCompletelyReducible_of_forall_eq_bot_or_eq_top eq_bot_or_eq_top
+
+/-- If `V` is completely reducible and every nonzero subcomodule of `V` contains a nonzero fixed
+vector, then the fixed subcomodule is everything.
+
+A subcomodule complement of the fixed subcomodule meets it trivially, so it contains no nonzero
+fixed vector and is therefore zero. -/
+theorem fixedSubcomodule_eq_top_of_isCompletelyReducible_of_forall_exists_fixed [One C]
+    (hcr : IsCompletelyReducible k C V)
+    (hfix : ∀ N : Subcomodule k C V, N ≠ ⊥ →
+      ∃ v ∈ N, v ≠ 0 ∧ coact (R := k) (C := C) (M := V) v = v ⊗ₜ[k] (1 : C)) :
+    fixedSubcomodule k C V = ⊤ := by
+  obtain ⟨Q, hQ⟩ := hcr (fixedSubcomodule k C V)
+  have hQbot : Q = ⊥ := by
+    by_contra hne
+    obtain ⟨v, hvQ, hv0, hvc⟩ := hfix Q hne
+    have hmem : v ∈ (fixedSubcomodule k C V).toSubmodule ⊓ Q.toSubmodule :=
+      ⟨mem_fixedSubcomodule.mpr hvc, hvQ⟩
+    rw [hQ.inf_eq_bot, Submodule.mem_bot] at hmem
+    exact hv0 hmem
+  have hsup := hQ.sup_eq_top
+  rw [hQbot, Subcomodule.bot_toSubmodule, sup_bot_eq] at hsup
+  exact Subcomodule.toSubmodule_eq_top.mp hsup
+
+/-- The vectorwise form of
+`TauCeti.Comodule.fixedSubcomodule_eq_top_of_isCompletelyReducible_of_forall_exists_fixed`. -/
+theorem coact_eq_tmul_one_of_isCompletelyReducible_of_forall_exists_fixed [One C]
+    (hcr : IsCompletelyReducible k C V)
+    (hfix : ∀ N : Subcomodule k C V, N ≠ ⊥ →
+      ∃ v ∈ N, v ≠ 0 ∧ coact (R := k) (C := C) (M := V) v = v ⊗ₜ[k] (1 : C))
+    (v : V) : coact (R := k) (C := C) (M := V) v = v ⊗ₜ[k] (1 : C) :=
+  fixedSubcomodule_eq_top_iff.mp
+    (fixedSubcomodule_eq_top_of_isCompletelyReducible_of_forall_exists_fixed hcr hfix) v
+
+end Comodule
+
+namespace Comodule
+
+variable {R : Type u} {C : Type v} {V : Type w}
+variable [CommRing R] [AddCommMonoid C] [Module R C] [Coalgebra R C]
+variable [AddCommGroup V] [Module R V] [Comodule R C V]
+
+/-- **Complete reducibility via equivariant retractions.** A comodule is completely reducible
+exactly when every subcomodule is the image of a comodule endomorphism that fixes it pointwise. -/
+theorem isCompletelyReducible_iff_forall_exists_hom [Module.Flat R C] :
+    IsCompletelyReducible R C V ↔ ∀ W : Subcomodule R C V,
+      ∃ P : Hom R C V V, (∀ v, P v ∈ W) ∧ ∀ w ∈ W, P w = w := by
+  -- A projection along a complement gives a retraction; conversely, flatness makes the kernel
+  -- of a retraction into a subcomodule complement.
+  refine ⟨fun hV W ↦ ?_, fun hV ↦ IsCompletelyReducible.of_exists_isCompl fun W ↦ ?_⟩
+  · obtain ⟨Q, hQ⟩ := hV.exists_isCompl W
+    exact ⟨Subcomodule.projection W Q hQ, Subcomodule.projection_apply_mem hQ,
+      fun _ ↦ Subcomodule.projection_apply_of_mem_left hQ⟩
+  · obtain ⟨P, hP_mem, hP_self⟩ := hV W
+    refine ⟨Hom.ker P, ?_⟩
+    rw [Hom.ker_toSubmodule,
+      ← LinearMap.ker_codRestrict W.toSubmodule P.toLinearMap hP_mem]
+    exact LinearMap.isCompl_of_proj fun w ↦ Subtype.ext (hP_self w w.2)
+
+end Comodule
+
+namespace Coalgebra
+
+variable (k : Type u) (C : Type v)
+variable [Field k]
+variable [AddCommMonoid C] [Module k C] [Coalgebra k C]
+
+/-- A coalgebra is linearly reductive in carrier universe `w` when every finite-dimensional
+comodule over it whose carrier lies in `Type w` is completely reducible. For a commutative Hopf
+algebra representing an affine group, this is the usual complete-reducibility definition of a
+linearly reductive group at that universe. -/
+def IsLinearlyReductive : Prop :=
+  ∀ (V : Type w) [AddCommMonoid V] [Module k V] [Comodule k C V] [Module.Finite k V],
+    Comodule.IsCompletelyReducible k C V
+
+end Coalgebra
+
+namespace Comodule
+
+section OrderIso
+
+variable (k : Type u) [CommSemiring k]
+variable {C : Type v} {D : Type*} {V : Type w} {W : Type*}
+variable [AddCommMonoid C] [Module k C] [Coalgebra k C]
+variable [AddCommMonoid D] [Module k D] [Coalgebra k D]
+variable [AddCommMonoid V] [Module k V] [Comodule k C V]
+variable [AddCommMonoid W] [Module k W] [Comodule k D W]
+
+/-- Complete reducibility transfers across compatible order isomorphisms of subcomodules and
+their underlying submodules. -/
+theorem isCompletelyReducible_of_orderIso
+    (Φ : Subcomodule k C V ≃o Subcomodule k D W)
+    (E : Submodule k V ≃o Submodule k W)
+    (hΦ : ∀ A, (Φ A).toSubmodule = E A.toSubmodule)
+    (h : IsCompletelyReducible k C V) : IsCompletelyReducible k D W := by
+  intro A
+  obtain ⟨Q, hQ⟩ := h (Φ.symm A)
+  refine ⟨Φ Q, ?_⟩
+  have hQ' := E.isCompl_iff.mp hQ
+  rw [← hΦ (Φ.symm A), ← hΦ Q, Φ.apply_symm_apply] at hQ'
+  exact hQ'
+
+end OrderIso
+
+section Transport
+
+variable (k : Type u) [CommSemiring k]
+variable {C : Type v} [AddCommMonoid C] [Module k C] [Coalgebra k C]
+variable {V : Type w} {W : Type*}
+variable [AddCommMonoid V] [Module k V] [Comodule k C V]
+variable [AddCommMonoid W] [Module k W]
+
+/-- Complete reducibility is invariant under transporting a comodule structure along a linear
+equivalence. -/
+theorem isCompletelyReducible_transport_iff (e : V ≃ₗ[k] W) :
+    (letI : Comodule k C W := Transport e;
+      IsCompletelyReducible k C W) ↔ IsCompletelyReducible k C V := by
+  let _ : Comodule k C W := Transport e
+  let Φ : Subcomodule k C V ≃o Subcomodule k C W := Subcomodule.transportOrderIso e
+  let E : Submodule k V ≃o Submodule k W := Submodule.orderIsoMapComap e
+  constructor
+  · exact isCompletelyReducible_of_orderIso k Φ.symm E.symm
+      (Subcomodule.transportOrderIso_symm_apply_toSubmodule e)
+  · exact isCompletelyReducible_of_orderIso k Φ E
+      (Subcomodule.transportOrderIso_apply_toSubmodule e)
+
+end Transport
+
+section Split
+
+variable {k : Type u} [CommSemiring k]
+variable {C : Type v} {D : Type*}
+variable [AddCommMonoid C] [Module k C] [Coalgebra k C]
+variable [AddCommMonoid D] [Module k D] [Coalgebra k D]
+variable {V : Type w} [AddCommMonoid V] [Module k V] [Comodule k C V]
+
+/-- Complete reducibility is unchanged by corestriction along a coalgebra morphism
+with a linear retraction, in particular along a coalgebra equivalence. -/
+theorem isCompletelyReducible_corestrict_iff_of_split (f : C →ₗc[k] D)
+    (r : D →ₗ[k] C) (hr : r.comp f.toLinearMap = LinearMap.id) :
+    (letI : Comodule k D V := Comodule.Corestrict f;
+      IsCompletelyReducible k D V) ↔ IsCompletelyReducible k C V := by
+  let _ : Comodule k D V := Comodule.Corestrict f
+  constructor
+  · exact isCompletelyReducible_of_orderIso k
+      (Subcomodule.corestrictOrderIsoOfSplit f r hr).symm (OrderIso.refl _)
+      (fun A ↦ by simp)
+  · exact isCompletelyReducible_of_orderIso k
+      (Subcomodule.corestrictOrderIsoOfSplit f r hr) (OrderIso.refl _)
+      (fun A ↦ by simp)
+
+end Split
+
+end Comodule
+
+namespace Coalgebra
+
+variable (k : Type u) [Field k]
+variable {C : Type v} {D : Type*}
+variable [AddCommMonoid C] [Module k C] [Coalgebra k C]
+variable [AddCommMonoid D] [Module k D] [Coalgebra k D]
+
+namespace IsLinearlyReductive
+
+/-- Construct linear reductivity by proving complete reducibility of every finite-dimensional
+comodule with carrier in the given universe. -/
+theorem of_forall_isCompletelyReducible
+    (h : ∀ (V : Type w) [AddCommMonoid V] [Module k V] [Comodule k C V] [Module.Finite k V],
+      Comodule.IsCompletelyReducible k C V) :
+    IsLinearlyReductive.{u, v, w} k C :=
+  h
+
+/-- Apply linear reductivity to a finite-dimensional comodule in the same carrier universe.
+
+Every finite-dimensional comodule whose carrier lies in the universe quantified by the
+hypothesis is completely reducible. -/
+theorem isCompletelyReducible_sameUniverse
+    (h : IsLinearlyReductive.{u, v, w} k C)
+    (V : Type w) [AddCommMonoid V] [Module k V] [Comodule k C V] [Module.Finite k V] :
+    Comodule.IsCompletelyReducible k C V :=
+  h V
+
+/-- If every finite-dimensional comodule whose carrier is in the base-field universe is
+completely reducible, then every finite-dimensional comodule is completely reducible, regardless
+of its carrier universe. The finiteness assumption is removed by
+`TauCeti.Coalgebra.IsLinearlyReductive.isCompletelyReducible`. -/
+theorem isCompletelyReducible_of_finite
+    (h : IsLinearlyReductive.{u, v, u} k C)
+    {V : Type w} [AddCommMonoid V] [Module k V] [Comodule k C V] [Module.Finite k V] :
+    Comodule.IsCompletelyReducible k C V := by
+  let : AddCommGroup V := Module.addCommMonoidToAddCommGroup k
+  let : Module.Free k V := Module.Free.of_divisionRing k V
+  let e : V ≃ₗ[k] (Fin (Module.finrank k V) → k) := (Module.finBasis k V).equivFun
+  let _ : Comodule k C (Fin (Module.finrank k V) → k) := Comodule.Transport e
+  exact (Comodule.isCompletelyReducible_transport_iff k e).mp (h _)
+
+end IsLinearlyReductive
+
+/-- Linear reductivity is invariant under equivalence of coalgebras. -/
+theorem isLinearlyReductive_iff_of_coalgEquiv (e : C ≃ₗc[k] D) :
+    IsLinearlyReductive.{u, v, w} k C ↔ IsLinearlyReductive.{u, _, w} k D := by
+  constructor
+  · intro h V _ _ _ _
+    let _ : Comodule k C V := Comodule.Corestrict e.symm.toCoalgHom
+    exact (Comodule.isCompletelyReducible_corestrict_iff_of_split e.symm.toCoalgHom
+      e.toLinearMap (by ext; simp)).mp (h V)
+  · intro h V _ _ _ _
+    let _ : Comodule k D V := Comodule.Corestrict e.toCoalgHom
+    exact (Comodule.isCompletelyReducible_corestrict_iff_of_split e.toCoalgHom
+      e.symm.toLinearMap (by ext; simp)).mp (h V)
+
+end Coalgebra
+
+namespace Comodule
+
+section Ring
+
+variable {R : Type u} [CommRing R]
+variable {C : Type v} [AddCommMonoid C] [Module R C] [Coalgebra R C] [Module.Flat R C]
+variable {V : Type w} [AddCommGroup V] [Module R V] [Comodule R C V]
+
+/-- Let `Q` be maximal among the subcomodules meeting `W` trivially. Then `W ⊔ Q` contains every
+completely reducible subcomodule `F`: otherwise a complement in `F` of `F ∩ (W ⊔ Q)` could be
+added to `Q`. -/
+theorem le_sup_of_maximal_disjoint {W Q : Subcomodule R C V}
+    (hQ : Maximal (fun Q : Subcomodule R C V ↦ Disjoint W.toSubmodule Q.toSubmodule) Q)
+    (F : Subcomodule R C V) (hF : IsCompletelyReducible R C F) : F ≤ W ⊔ Q := by
+  -- `X` is `F ∩ (W ⊔ Q)`, seen inside `F`, and `Y` is a complement of it in `F`.
+  let X := (W ⊔ Q).comap (Subcomodule.subtype F)
+  obtain ⟨Y, hY⟩ := hF.exists_isCompl X
+  let Y' := Y.map (Subcomodule.subtype F)
+  have hY'dis : Disjoint (W ⊔ Q).toSubmodule Y'.toSubmodule := by
+    refine Submodule.disjoint_def.mpr fun v hv hv' ↦ ?_
+    obtain ⟨y, hyY, rfl⟩ := Subcomodule.mem_map.mp hv'
+    have hyX : y ∈ X := Subcomodule.mem_comap.mpr hv
+    simpa using Submodule.disjoint_def.mp hY.disjoint y hyX hyY
+  -- `Q ⊔ Y'` still meets `W` trivially, so it is `Q` by maximality.
+  have hdis : Disjoint W.toSubmodule (Q ⊔ Y').toSubmodule := by
+    rw [Subcomodule.sup_toSubmodule]
+    exact hQ.1.disjoint_sup_right_of_disjoint_sup_left
+      (by rwa [← Subcomodule.sup_toSubmodule])
+  have hY'Q : Y' ≤ Q := le_sup_right.trans (hQ.2 hdis le_sup_left)
+  have hYbot : Y.toSubmodule = ⊥ := by
+    refine (Submodule.eq_bot_iff _).mpr fun y hy ↦ Subtype.ext ?_
+    have hy' : (y : V) ∈ Y' := by
+      simpa using Subcomodule.mem_map_of_mem (Subcomodule.subtype F) hy
+    exact Submodule.disjoint_def.mp hY'dis _ ((le_sup_right : Q ≤ W ⊔ Q) (hY'Q hy')) hy'
+  have hX : X.toSubmodule = ⊤ := by simpa [hYbot] using hY.sup_eq_top
+  intro v hv
+  simpa using Subcomodule.mem_comap.mp (hX ▸ Submodule.mem_top : (⟨v, hv⟩ : F) ∈ X.toSubmodule)
+
+/-- **A sum of completely reducible subcomodules is completely reducible.** If a family of
+subcomodules, each completely reducible as a comodule in its own right, has supremum the whole
+comodule, then the comodule is completely reducible. -/
+theorem isCompletelyReducible_of_sSup_eq_top {S : Set (Subcomodule R C V)} (hS : sSup S = ⊤)
+    (hcr : ∀ F ∈ S, IsCompletelyReducible R C F) : IsCompletelyReducible R C V := by
+  -- This is the argument of `complementedLattice_of_sSup_atoms_eq_top`. That theorem needs a
+  -- modular complete lattice, while subcomodules only form a complete join-semilattice here, so
+  -- intersections with a subcomodule `F` are formed as inverse images along the inclusion of `F`
+  -- (in `le_sup_of_maximal_disjoint`), and disjointness is tested on underlying submodules.
+  refine IsCompletelyReducible.of_exists_isCompl fun W ↦ ?_
+  -- A subcomodule maximal among those meeting `W` trivially is a complement of `W`.
+  obtain ⟨Q, hQ⟩ :=
+    zorn_le₀ {Q : Subcomodule R C V | Disjoint W.toSubmodule Q.toSubmodule} fun c hc hchain ↦ by
+      rcases c.eq_empty_or_nonempty with rfl | hne
+      · exact ⟨⊥, by simp, by simp⟩
+      refine ⟨sSup c, Submodule.disjoint_def.mpr fun v hvW hv ↦ ?_, fun _ hz ↦ le_sSup hz⟩
+      obtain ⟨N, hN, hvN⟩ :=
+        (Subcomodule.mem_sSup_of_directedOn hne hchain.directedOn).mp hv
+      exact Submodule.disjoint_def.mp (hc hN) v hvW hvN
+  refine ⟨Q, hQ.1, codisjoint_iff.mpr ?_⟩
+  rw [← Subcomodule.sup_toSubmodule, Subcomodule.toSubmodule_eq_top, eq_top_iff, ← hS]
+  exact sSup_le fun F hF ↦ le_sup_of_maximal_disjoint hQ F (hcr F hF)
+
+end Ring
+
+section Free
+
+variable {R : Type u} [CommRing R]
+variable {C : Type v} [AddCommMonoid C] [Module R C] [Coalgebra R C] [Module.Free R C]
+variable {V : Type w} [AddCommGroup V] [Module R V] [Comodule R C V]
+
+/-- For a free coefficient coalgebra, a comodule whose finite subcomodules are completely
+reducible is completely reducible. -/
+theorem isCompletelyReducible_of_forall_finite
+    (h : ∀ F : Subcomodule R C V, Module.Finite R F → IsCompletelyReducible R C F) :
+    IsCompletelyReducible R C V :=
+  isCompletelyReducible_of_sSup_eq_top Subcomodule.sSup_finiteSubcomodules_eq_top
+    fun F hF ↦ h F (Subcomodule.mem_finiteSubcomodules.mp hF)
+
+end Free
+
+end Comodule
+
+namespace Subcomodule
+
+section Semiring
+
+variable {R : Type u} [CommSemiring R]
+variable {C : Type v} [AddCommMonoid C] [Module R C] [Coalgebra R C] [Module.Flat R C]
+variable {V : Type w} [AddCommMonoid V] [Module R V] [Comodule R C V]
+
+/-- A simple subcomodule is completely reducible, as a comodule in its own right. -/
+theorem isCompletelyReducible_of_isAtom {S : Subcomodule R C V}
+    (hS : IsAtom S) : Comodule.IsCompletelyReducible R C S := by
+  refine Comodule.isCompletelyReducible_of_forall_eq_bot_or_eq_top fun Z ↦ ?_
+  -- The image of `Z` in `V` lies below the atom `S`, so it is `⊥` or `S`.
+  rcases hS.le_iff.mp (map_le_iff.mpr fun x _ ↦ by simp : Z.map (subtype S) ≤ S)
+    with h | h
+  · refine Or.inl (eq_bot_iff.mpr fun z hz ↦ mem_bot.mpr (Subtype.ext ?_))
+    have hz' := mem_map_of_mem (subtype S) hz
+    rw [h, mem_bot] at hz'
+    simpa using hz'
+  · refine Or.inr (eq_top_iff.mpr fun s _ ↦ ?_)
+    obtain ⟨z, hz, hzs⟩ := mem_map.mp (h.symm ▸ s.2 : (s : V) ∈ Z.map (subtype S))
+    rwa [← Subtype.ext (by simpa using hzs : (z : V) = s)]
+
+end Semiring
+
+end Subcomodule
+
+namespace Comodule
+
+section Field
+
+variable {k : Type u} [Field k]
+variable {C : Type v} [AddCommMonoid C] [Module k C] [Coalgebra k C]
+variable {V : Type w} [AddCommMonoid V] [Module k V] [Comodule k C V]
+
+/-- **Complete reducibility as a sum of simple subcomodules.** Over a field, a comodule is
+completely reducible exactly when it is the supremum of its simple subcomodules. -/
+theorem isCompletelyReducible_iff_sSup_atoms_eq_top :
+    IsCompletelyReducible k C V ↔ sSup {S : Subcomodule k C V | IsAtom S} = ⊤ := by
+  let : AddCommGroup C := Module.addCommMonoidToAddCommGroup k
+  let : AddCommGroup V := Module.addCommMonoidToAddCommGroup k
+  refine ⟨fun hV ↦ ?_, fun h ↦ isCompletelyReducible_of_sSup_eq_top h
+    fun _ hS ↦ Subcomodule.isCompletelyReducible_of_isAtom hS⟩
+  -- A complement of the sum of the simple subcomodules contains no simple subcomodule.
+  obtain ⟨Q, hQ⟩ := hV.exists_isCompl (sSup {S : Subcomodule k C V | IsAtom S})
+  rcases eq_bot_or_exists_atom_le Q with rfl | ⟨A, hA, hAQ⟩
+  · have h := hQ.sup_eq_top
+    rwa [Subcomodule.bot_toSubmodule, sup_bot_eq, Subcomodule.toSubmodule_eq_top] at h
+  · refine absurd ?_ hA.1
+    rw [← Subcomodule.toSubmodule_eq_bot, ← le_bot_iff, ← hQ.inf_eq_bot]
+    exact le_inf (Subcomodule.toSubmodule_le_toSubmodule.mpr (le_sSup hA))
+      (Subcomodule.toSubmodule_le_toSubmodule.mpr hAQ)
+
+end Field
+
+end Comodule
+
+namespace Coalgebra.IsLinearlyReductive
+
+variable {k : Type u} [Field k]
+
+/-- **Every comodule over a linearly reductive coalgebra is completely reducible.** Linear
+reductivity only asks for complete reducibility of finite-dimensional comodules whose carrier
+lies in the base-field universe; this conclusion holds for every comodule, in every carrier
+universe and with no finiteness assumption, so it applies for instance to the regular comodule. -/
+theorem isCompletelyReducible
+    {C : Type v} [AddCommMonoid C] [Module k C] [Coalgebra k C]
+    (hC : IsLinearlyReductive.{u, v, u} k C)
+    {V : Type w} [AddCommMonoid V] [Module k V] [Comodule k C V] :
+    Comodule.IsCompletelyReducible k C V := by
+  let : AddCommGroup C := Module.addCommMonoidToAddCommGroup k
+  let : AddCommGroup V := Module.addCommMonoidToAddCommGroup k
+  exact Comodule.isCompletelyReducible_of_forall_finite fun _ _ ↦
+    isCompletelyReducible_of_finite k hC
+
+/-- Every comodule over a linearly reductive coalgebra is the sum of its simple subcomodules. -/
+theorem sSup_atoms_eq_top
+    {C : Type v} [AddCommMonoid C] [Module k C] [Coalgebra k C]
+    (hC : IsLinearlyReductive.{u, v, u} k C)
+    {V : Type w} [AddCommMonoid V] [Module k V] [Comodule k C V] :
+    sSup {S : Subcomodule k C V | IsAtom S} = ⊤ :=
+  Comodule.isCompletelyReducible_iff_sSup_atoms_eq_top.mp hC.isCompletelyReducible
+
+end Coalgebra.IsLinearlyReductive
+
+namespace Comodule
+
+section Projection
+
+variable (k : Type u) (G : Type v) (V : Type w)
+variable [Field k]
+variable [AddCommMonoid V] [Module k V] [Comodule k (MonoidAlgebra k G) V]
+
+/-- Sum the result of applying `p` weightwise and projecting each result back to its source
+weight. -/
+noncomputable def projectedWeightSum (p : V →ₗ[k] V) : (G →₀ V) →ₗ[k] V :=
+  Finsupp.lsum k fun g ↦ weightProj k G V g ∘ₗ p
+
+/-- The endomorphism obtained by applying `p` separately to each weight component. -/
+noncomputable def equivariantProjection (p : V →ₗ[k] V) : V →ₗ[k] V :=
+  (projectedWeightSum k G V p).comp (weightDecomposition k G V)
+
+theorem equivariantProjection_apply (p : V →ₗ[k] V) (v : V) :
+    equivariantProjection k G V p v =
+      (weightDecomposition k G V v).sum fun g w ↦ weightProj k G V g (p w) := by
+  classical
+  rfl
+
+theorem equivariantProjection_of_mem_weightSpace (p : V →ₗ[k] V)
+    {g : G} {v : V} (hv : v ∈ weightSpace k G V g) :
+    equivariantProjection k G V p v = weightProj k G V g (p v) := by
+  classical
+  rw [equivariantProjection_apply]
+  have hdecomp : weightDecomposition k G V v = Finsupp.single g v := by
+    apply Finsupp.ext
+    intro h
+    rw [weightDecomposition_apply]
+    by_cases hh : h = g
+    · subst h
+      simp [weightProj_of_mem hv]
+    · simp [hh, weightProj_of_mem_of_ne hh hv]
+  rw [hdecomp]
+  simp
+
+theorem equivariantProjection_mem_weightSpace (p : V →ₗ[k] V)
+    {g : G} {v : V} (hv : v ∈ weightSpace k G V g) :
+    equivariantProjection k G V p v ∈ weightSpace k G V g := by
+  rw [equivariantProjection_of_mem_weightSpace k G V p hv]
+  exact weightProj_mem_weightSpace g (p v)
+
+/-- The weightwise version of a linear endomorphism, bundled as a comodule morphism. -/
+noncomputable def equivariantProjectionHom (p : V →ₗ[k] V) :
+    Hom k (MonoidAlgebra k G) V V :=
+  Hom.ofMapWeightSpace (equivariantProjection k G V p)
+    (fun g _ hv ↦ equivariantProjection_mem_weightSpace k G V p (g := g) hv)
+
+theorem equivariantProjection_mem_subcomodule
+    (N : Subcomodule k (MonoidAlgebra k G) V) (p : V →ₗ[k] V)
+    (hp : ∀ v, p v ∈ N) (v : V) : equivariantProjection k G V p v ∈ N := by
+  classical
+  rw [equivariantProjection_apply]
+  exact Submodule.sum_mem N.toSubmodule fun g _ ↦
+    weightProj_mem_subcomodule (R := k) (G := G) (V := V) N g (hp _)
+
+theorem equivariantProjection_apply_of_mem
+    (N : Subcomodule k (MonoidAlgebra k G) V) (p : V →ₗ[k] V)
+    (hp : ∀ {v}, v ∈ N → p v = v) {v : V} (hv : v ∈ N) :
+    equivariantProjection k G V p v = v := by
+  classical
+  rw [equivariantProjection_apply]
+  have hterm : ∀ g ∈ (weightDecomposition k G V v).support,
+      weightProj k G V g (p (weightProj k G V g v)) = weightProj k G V g v := by
+    intro g _
+    rw [hp (weightProj_mem_subcomodule (R := k) (G := G) (V := V) N g hv),
+      weightProj_weightProj_self]
+  rw [Finsupp.sum]
+  simp_rw [weightDecomposition_apply]
+  rw [Finset.sum_congr rfl hterm]
+  simpa only [Finsupp.sum, weightDecomposition_apply] using
+    weightDecomposition_sum (R := k) (G := G) (V := V) v
+
+theorem exists_equivariantProjection
+    (N : Subcomodule k (MonoidAlgebra k G) V) :
+    ∃ P : Hom k (MonoidAlgebra k G) V V,
+      LinearMap.range P.toLinearMap = N.toSubmodule ∧
+        IsIdempotentElem P.toLinearMap := by
+  classical
+  let : AddCommGroup V := Module.addCommMonoidToAddCommGroup k
+  obtain ⟨Q, hNQ⟩ := Submodule.exists_isCompl N.toSubmodule
+  let p : V →ₗ[k] V := N.toSubmodule.projection Q hNQ
+  let P := equivariantProjectionHom k G V p
+  have hP : P.toLinearMap = equivariantProjection k G V p := by
+    simp only [P, equivariantProjectionHom, Hom.ofMapWeightSpace_toLinearMap]
+  refine ⟨P, ?_, ?_⟩
+  · rw [hP]
+    apply le_antisymm
+    · rintro _ ⟨v, rfl⟩
+      exact equivariantProjection_mem_subcomodule k G V N p
+        (fun w ↦ Submodule.projection_apply_mem hNQ w) v
+    · intro n hn
+      refine ⟨n, ?_⟩
+      exact equivariantProjection_apply_of_mem k G V N p
+        (fun hv ↦ Submodule.projection_apply_of_mem_left hNQ hv) hn
+  · unfold IsIdempotentElem
+    rw [hP]
+    ext v
+    apply equivariantProjection_apply_of_mem k G V N p
+      (fun hv ↦ Submodule.projection_apply_of_mem_left hNQ hv)
+    exact equivariantProjection_mem_subcomodule k G V N p
+      (fun w ↦ Submodule.projection_apply_mem hNQ w) v
+
+/-- Every comodule over a monoid-algebra coalgebra over a field is completely reducible. -/
+theorem isCompletelyReducible_monoidAlgebra :
+    IsCompletelyReducible k (MonoidAlgebra k G) V := by
+  let : AddCommGroup V := Module.addCommMonoidToAddCommGroup k
+  intro N
+  obtain ⟨P, hrange, hidem⟩ := exists_equivariantProjection k G V N
+  refine ⟨P.ker, ?_⟩
+  rw [Comodule.Hom.ker_toSubmodule, ← hrange]
+  exact LinearMap.IsIdempotentElem.isCompl (f := P.toLinearMap) hidem
+
+end Projection
+
+end Comodule
+
+namespace Coalgebra
+
+universe u' v' w'
+
+/-- A monoid-algebra coalgebra over a field is linearly reductive. For a commutative group `G`,
+this is the coordinate algebra statement that the diagonalizable group `D(G)` is linearly
+reductive. -/
+theorem isLinearlyReductive_monoidAlgebra (k : Type u') (G : Type v') [Field k] :
+    IsLinearlyReductive.{u', max u' v', w'} k (MonoidAlgebra k G) := by
+  intro V _ _ _ _
+  exact Comodule.isCompletelyReducible_monoidAlgebra k G V
+
+end Coalgebra
+
+end TauCeti

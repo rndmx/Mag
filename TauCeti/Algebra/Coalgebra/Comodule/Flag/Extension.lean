@@ -1,0 +1,282 @@
+/-
+Copyright (c) 2026 The Tau Ceti contributors. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: The Tau Ceti contributors
+-/
+
+import TauCeti.Compat.All
+import TauCeti.LinearAlgebra.ExtensionBasis
+import TauCeti.Algebra.Coalgebra.Comodule.Flag.Basic
+import TauCeti.Algebra.Coalgebra.Subcomodule.Induced
+
+/-!
+# Upper-triangular comodule structures and extensions
+
+An extension of upper-triangular comodules is again upper triangular. More explicitly, let `N` be
+a subcomodule of `M`. A basis of `N` and a basis of `M ⧸ N` combine, using Mathlib's
+`Module.Basis.sumQuot`, into a basis of `M`. If the coefficient matrices on the subcomodule and
+quotient are upper triangular, then the combined coefficient matrix is upper triangular, and its
+diagonal is the concatenation of theirs; in particular unitriangularity is inherited too.
+
+The coefficient matrix has the expected block form. Its diagonal blocks are the coefficient
+matrices of `N` and `M ⧸ N`, its lower-left block is zero because `N` is stable, and its
+upper-right block records the extension class.
+
+This is the extension step needed by the Kolchin inductions on unipotent groups. A weight line
+supplies the first diagonal block; applying the induction hypothesis to the quotient and this file
+to the resulting extension constructs the complete invariant flag.
+
+## Main declarations
+
+* `TauCeti.Comodule.coefficientMatrix_castAdd_castAdd_of_castAdd_eq` and
+  `TauCeti.Comodule.coefficientMatrix_natAdd_castAdd_of_castAdd_eq`: the block form of the
+  coefficient matrix in any basis whose first block is a basis of a subcomodule.
+* `TauCeti.Comodule.extensionBasis`: the basis of a comodule obtained from bases of a subcomodule
+  and its quotient.
+* `TauCeti.Comodule.coefficientMatrix_extensionBasis_castAdd_castAdd`: the subcomodule diagonal
+  block.
+* `TauCeti.Comodule.coefficientMatrix_extensionBasis_natAdd_natAdd`: the quotient diagonal block.
+* `TauCeti.Comodule.coefficientMatrix_extensionBasis_natAdd_castAdd`: the vanishing lower-left
+  block.
+* `TauCeti.Comodule.coefficientMatrix_extensionBasis_isUpperTriangular`: closure of
+  upper-triangular comodule structures under extensions.
+* `TauCeti.Comodule.coefficientMatrix_extensionBasis_isUpperUnitriangular`: its unitriangular
+  refinement.
+
+## References
+
+* J. C. Jantzen, *Representations of Algebraic Groups*, I.2.
+* T. A. Springer, *Linear Algebraic Groups*, §2.4.
+-/
+
+section
+
+namespace TauCeti.Comodule
+
+open Module
+
+universe u v w
+
+noncomputable section
+
+attribute [local instance 1100] Module.Free.of_divisionRing Module.Flat.of_free
+
+variable {k : Type u} {C : Type v} {M : Type w} {m n : ℕ}
+
+section Semiring
+
+variable [CommSemiring k]
+variable [AddCommMonoid C] [Module k C] [Coalgebra k C] [Module.Flat k C]
+variable [AddCommMonoid M] [Module k M] [Comodule k C M]
+
+/-- If the first block of a basis of `M` is a basis of the subcomodule `N`, the corresponding
+diagonal block of its coefficient matrix is the coefficient matrix of `N` in that basis. -/
+theorem coefficientMatrix_castAdd_castAdd_of_castAdd_eq
+    (N : Subcomodule k C M) (bN : Basis (Fin m) k N) (b : Basis (Fin (m + n)) k M)
+    (hb : ∀ j, b (Fin.castAdd n j) = bN j) (i j : Fin m) :
+    coefficientMatrix (C := C) b (Fin.castAdd n i) (Fin.castAdd n j) =
+      coefficientMatrix (C := C) bN i j := by
+  rw [coefficientMatrix_apply, hb, ← N.subtype_apply (bN j), matrixCoefficient_map,
+    coefficientMatrix_apply]
+  congr 1
+  refine bN.ext fun l ↦ ?_
+  simp only [LinearMap.comp_apply, Subcomodule.subtype_toLinearMap,
+    SMulMemClass.subtype_apply, ← hb, Basis.coord_apply, Basis.repr_self,
+    Finsupp.single_apply, (Fin.castAdd_injective m n).eq_iff]
+
+/-- If the first block of a basis of `M` is a basis of the subcomodule `N`, the lower-left block
+of its coefficient matrix vanishes. This is the matrix form of stability of the subcomodule. -/
+theorem coefficientMatrix_natAdd_castAdd_of_castAdd_eq
+    (N : Subcomodule k C M) (bN : Basis (Fin m) k N) (b : Basis (Fin (m + n)) k M)
+    (hb : ∀ j, b (Fin.castAdd n j) = bN j) (i : Fin n) (j : Fin m) :
+    coefficientMatrix (C := C) b (Fin.natAdd m i) (Fin.castAdd n j) = 0 := by
+  rw [coefficientMatrix_apply, hb, ← N.subtype_apply (bN j), matrixCoefficient_map]
+  have hcoord : (b.coord (Fin.natAdd m i)).comp N.subtype.toLinearMap = 0 := by
+    refine bN.ext fun l ↦ ?_
+    simp only [LinearMap.comp_apply, Subcomodule.subtype_toLinearMap,
+      SMulMemClass.subtype_apply, ← hb, Basis.coord_apply, Basis.repr_self,
+      Finsupp.single_apply, LinearMap.zero_apply]
+    refine ite_eq_right fun h ↦ ?_
+    have hval := congrArg Fin.val h
+    simp only [Fin.val_castAdd, Fin.val_natAdd] at hval
+    omega
+  rw [hcoord]
+  simp
+
+end Semiring
+
+variable [Field k]
+variable [AddCommGroup C] [Module k C] [Coalgebra k C]
+variable [AddCommGroup M] [Module k M] [Comodule k C M]
+
+/-- The tautological linear equivalence between a subcomodule and the subtype of its exposed
+underlying submodule. -/
+def toSubmoduleEquiv (N : Subcomodule k C M) : N ≃ₗ[k] N.toSubmodule where
+  toFun x := ⟨x, x.2⟩
+  invFun x := ⟨x, x.2⟩
+  left_inv _ := rfl
+  right_inv _ := rfl
+  map_add' _ _ := rfl
+  map_smul' _ _ := rfl
+
+/-- A basis of a subcomodule, regarded as a basis of its exposed underlying submodule. -/
+def toSubmoduleBasis (N : Subcomodule k C M) (bN : Basis (Fin m) k N) :
+    Basis (Fin m) k N.toSubmodule :=
+  bN.map (toSubmoduleEquiv N)
+
+@[simp]
+theorem toSubmoduleBasis_apply (N : Subcomodule k C M) (bN : Basis (Fin m) k N)
+    (i : Fin m) : ((toSubmoduleBasis N bN i : N.toSubmodule) : M) = bN i := by
+  rfl
+
+/-- The basis of a comodule obtained by putting a basis of a subcomodule before chosen lifts of a
+basis of the quotient. The construction is Mathlib's `Module.Basis.sumQuot`, reindexed by the
+standard equivalence `Fin m ⊕ Fin n ≃ Fin (m + n)`. -/
+def extensionBasis (N : Subcomodule k C M) (bN : Basis (Fin m) k N)
+    (bQ : Basis (Fin n) k (M ⧸ N.toSubmodule)) : Basis (Fin (m + n)) k M :=
+  TauCeti.extensionBasis N.toSubmodule (toSubmoduleBasis N bN) bQ
+
+/-- On the first block, `extensionBasis` is the given basis of the subcomodule. -/
+@[simp]
+theorem extensionBasis_castAdd (N : Subcomodule k C M) (bN : Basis (Fin m) k N)
+    (bQ : Basis (Fin n) k (M ⧸ N.toSubmodule)) (i : Fin m) :
+    extensionBasis N bN bQ (Fin.castAdd n i) = bN i := by
+  rw [extensionBasis, TauCeti.extensionBasis_castAdd]
+  exact toSubmoduleBasis_apply N bN i
+
+/-- On the second block, the quotient classes of `extensionBasis` are the given quotient basis. -/
+@[simp]
+theorem extensionBasis_natAdd_mkQ (N : Subcomodule k C M) (bN : Basis (Fin m) k N)
+    (bQ : Basis (Fin n) k (M ⧸ N.toSubmodule)) (j : Fin n) :
+    Submodule.Quotient.mk (extensionBasis N bN bQ (Fin.natAdd m j)) = bQ j := by
+  rw [extensionBasis, TauCeti.extensionBasis_natAdd_mkQ]
+
+/-- The first-block coordinates of an element of the subcomodule in `extensionBasis` are its
+coordinates in the given subcomodule basis. -/
+@[simp]
+theorem extensionBasis_repr_castAdd (N : Subcomodule k C M) (bN : Basis (Fin m) k N)
+    (bQ : Basis (Fin n) k (M ⧸ N.toSubmodule)) (x : N) (i : Fin m) :
+    (extensionBasis N bN bQ).repr x (Fin.castAdd n i) = bN.repr x i := by
+  -- `N` and the subtype of `N.toSubmodule` have different wrappers, so expose the tautological
+  -- equivalence before applying the module-level coordinate theorem.
+  change ((extensionBasis N bN bQ).repr
+    ((toSubmoduleEquiv N x : N.toSubmodule) : M)) (Fin.castAdd n i) = bN.repr x i
+  rw [extensionBasis, TauCeti.extensionBasis_repr_castAdd]
+  rfl
+
+/-- The second-block coordinates in `extensionBasis` are the coordinates of the quotient class. -/
+@[simp]
+theorem extensionBasis_repr_natAdd (N : Subcomodule k C M) (bN : Basis (Fin m) k N)
+    (bQ : Basis (Fin n) k (M ⧸ N.toSubmodule)) (x : M) (j : Fin n) :
+    (extensionBasis N bN bQ).repr x (Fin.natAdd m j) =
+      bQ.repr (N.toSubmodule.mkQ x) j := by
+  rw [extensionBasis, TauCeti.extensionBasis_repr_natAdd]
+
+/-- The subcomodule diagonal block of the combined coefficient matrix is the coefficient matrix
+in the given subcomodule basis. -/
+@[simp]
+theorem coefficientMatrix_extensionBasis_castAdd_castAdd
+    (N : Subcomodule k C M) (bN : Basis (Fin m) k N)
+    (bQ : Basis (Fin n) k (M ⧸ N.toSubmodule)) (i j : Fin m) :
+    coefficientMatrix (C := C) (extensionBasis N bN bQ)
+        (Fin.castAdd n i) (Fin.castAdd n j) =
+      coefficientMatrix (C := C) bN i j :=
+  coefficientMatrix_castAdd_castAdd_of_castAdd_eq N bN _ (extensionBasis_castAdd N bN bQ) i j
+
+/-- The lower-left block of the combined coefficient matrix vanishes. This is the matrix form of
+stability of the subcomodule. -/
+@[simp]
+theorem coefficientMatrix_extensionBasis_natAdd_castAdd
+    (N : Subcomodule k C M) (bN : Basis (Fin m) k N)
+    (bQ : Basis (Fin n) k (M ⧸ N.toSubmodule)) (i : Fin n) (j : Fin m) :
+    coefficientMatrix (C := C) (extensionBasis N bN bQ)
+        (Fin.natAdd m i) (Fin.castAdd n j) = 0 :=
+  coefficientMatrix_natAdd_castAdd_of_castAdd_eq N bN _ (extensionBasis_castAdd N bN bQ) i j
+
+/-- The quotient diagonal block of the combined coefficient matrix is the coefficient matrix in
+the given quotient basis. -/
+@[simp]
+theorem coefficientMatrix_extensionBasis_natAdd_natAdd
+    (N : Subcomodule k C M) (bN : Basis (Fin m) k N)
+    (bQ : Basis (Fin n) k (M ⧸ N.toSubmodule)) (i j : Fin n) :
+    coefficientMatrix (C := C) (extensionBasis N bN bQ)
+        (Fin.natAdd m i) (Fin.natAdd m j) =
+      coefficientMatrix (C := C) bQ i j := by
+  rw [coefficientMatrix_apply, coefficientMatrix_apply]
+  have hcoord :
+      (bQ.coord i).comp N.mkQ.toLinearMap =
+        (extensionBasis N bN bQ).coord (Fin.natAdd m i) := by
+    ext x
+    simp only [LinearMap.comp_apply, Subcomodule.mkQ_toLinearMap, Basis.coord_apply,
+      Submodule.mkQ_apply, extensionBasis_repr_natAdd]
+  calc
+    matrixCoefficient (R := k) (C := C)
+        ((extensionBasis N bN bQ).coord (Fin.natAdd m i))
+        (extensionBasis N bN bQ (Fin.natAdd m j)) =
+      matrixCoefficient (R := k) (C := C) (bQ.coord i)
+        (N.mkQ (extensionBasis N bN bQ (Fin.natAdd m j))) := by
+          rw [matrixCoefficient_map, hcoord]
+    _ = matrixCoefficient (R := k) (C := C) (bQ.coord i) (bQ j) := by
+      rw [N.mkQ_apply, extensionBasis_natAdd_mkQ]
+
+/-- If the induced coefficient matrices on a subcomodule and its quotient are upper triangular,
+then the coefficient matrix on their combined basis is upper triangular. -/
+theorem coefficientMatrix_extensionBasis_isUpperTriangular
+    (N : Subcomodule k C M) (bN : Basis (Fin m) k N)
+    (bQ : Basis (Fin n) k (M ⧸ N.toSubmodule))
+    (hN : (coefficientMatrix (C := C) bN).IsUpperTriangular)
+    (hQ : (coefficientMatrix (C := C) bQ).IsUpperTriangular) :
+    (coefficientMatrix (C := C) (extensionBasis N bN bQ)).IsUpperTriangular := by
+  intro i j hji
+  obtain ⟨i, rfl⟩ := finSumFinEquiv.surjective i
+  obtain ⟨j, rfl⟩ := finSumFinEquiv.surjective j
+  cases i with
+  | inl i =>
+      cases j with
+      | inl j =>
+          rw [finSumFinEquiv_apply_left, finSumFinEquiv_apply_left,
+            coefficientMatrix_extensionBasis_castAdd_castAdd]
+          simp only [finSumFinEquiv_apply_left] at hji
+          exact hN ((Fin.strictMono_castAdd n).lt_iff_lt.mp hji)
+      | inr j =>
+          rw [finSumFinEquiv_apply_left, finSumFinEquiv_apply_right] at hji
+          -- The two `Fin` embeddings do not simplify through `<`; their underlying indices
+          -- make the impossible cross-block inequality explicit.
+          change m + j.val < i.val at hji
+          omega
+  | inr i =>
+      cases j with
+      | inl j =>
+          rw [finSumFinEquiv_apply_right, finSumFinEquiv_apply_left,
+            coefficientMatrix_extensionBasis_natAdd_castAdd]
+      | inr j =>
+          rw [finSumFinEquiv_apply_right, finSumFinEquiv_apply_right,
+            coefficientMatrix_extensionBasis_natAdd_natAdd]
+          simp only [finSumFinEquiv_apply_right] at hji
+          exact hQ ((Fin.strictMono_natAdd m).lt_iff_lt.mp hji)
+
+variable [One C]
+
+/-- If the induced coefficient matrices on a subcomodule and its quotient are upper
+unitriangular, then the coefficient matrix on their combined basis is upper unitriangular. -/
+theorem coefficientMatrix_extensionBasis_isUpperUnitriangular
+    (N : Subcomodule k C M) (bN : Basis (Fin m) k N)
+    (bQ : Basis (Fin n) k (M ⧸ N.toSubmodule))
+    (hN : (coefficientMatrix (C := C) bN).IsUpperUnitriangular)
+    (hQ : (coefficientMatrix (C := C) bQ).IsUpperUnitriangular) :
+    (coefficientMatrix (C := C) (extensionBasis N bN bQ)).IsUpperUnitriangular := by
+  rw [Matrix.isUpperUnitriangular_def]
+  refine ⟨coefficientMatrix_extensionBasis_isUpperTriangular N bN bQ hN.isUpperTriangular
+    hQ.isUpperTriangular, fun i ↦ ?_⟩
+  obtain ⟨i, rfl⟩ := finSumFinEquiv.surjective i
+  cases i with
+  | inl i =>
+      rw [finSumFinEquiv_apply_left, coefficientMatrix_extensionBasis_castAdd_castAdd]
+      exact hN.apply_diag i
+  | inr i =>
+      rw [finSumFinEquiv_apply_right, coefficientMatrix_extensionBasis_natAdd_natAdd]
+      exact hQ.apply_diag i
+
+end
+
+end TauCeti.Comodule

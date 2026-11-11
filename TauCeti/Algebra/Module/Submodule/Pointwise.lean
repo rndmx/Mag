@@ -1,0 +1,166 @@
+/-
+Copyright (c) 2026 The Tau Ceti contributors. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: The Tau Ceti contributors
+Adapted from Tau Ceti (github.com/TauCetiProject/TauCeti, commit d2083f0); see TauCeti/CHANGES.md
+-/
+
+import TauCeti.Compat.All
+import TauCeti.Compat.Misc
+import Mathlib.Algebra.Module.Submodule.Pointwise
+import Mathlib.Algebra.Ring.Subring.Basic
+import Mathlib.Algebra.Ring.Action.Pointwise.Set
+
+/-!
+# Pointwise scalar actions on submodules
+
+This file also records how scalar products that fix or annihilate a scalar control its
+pointwise image of the whole module. The image-membership result needs only a distributive
+monoid action. Over a ring of scalars, negating the scalar does not change the pointwise image
+of a submodule, since a submodule is closed under negation. A unit of a ring stabilizes an
+additive subgroup, viewed as a `ℤ`-submodule, exactly when multiplication by the unit and by its
+inverse both preserve it.
+
+Let `S` be a subring of a commutative ring `A`, `M` an `A`-module and `M₀` an `S`-submodule of
+`M`. This file collects the elementary facts about the family `rⁿ • M₀`, for `r : S`, in
+Mathlib's pointwise action on submodules.
+
+The family is written out as `rⁿ • M₀` rather than wrapped in a definition of its own:
+`Submodule.mem_smul_pointwise_iff_exists` already characterises membership and
+`Submodule.smul_le_self_of_tower` already gives the shrinking, so a wrapper would only oblige
+this file to restate both.
+
+## Main results
+
+* `Submodule.pow_smul_mem_pow_smul`: the ambient-scalar bridge — an element of `M₀` scaled by
+  `sⁿ : A` lands in `⟨s, _⟩ⁿ • M₀`, so a consumer speaking `A` needs no coercion plumbing.
+* `Submodule.pow_smul_antitone`: the family is antitone in the exponent.
+* `Submodule.pow_add_smul_mem`: `M₀` absorbs further powers of a scalar drawn from `S`.
+* `Submodule.neg_smul_eq_smul`: over a ring of scalars, `(-a) • N = a • N`.
+* `Submodule.mem_stabilizer_units_iff`: a unit `u` of a ring stabilizes an additive subgroup `L`
+  under the pointwise action exactly when multiplication by `u` and by `u⁻¹` carries `L` into
+  itself.
+-/
+
+section
+
+open scoped Pointwise
+
+namespace Submodule
+
+variable {A : Type*} [CommRing A] {M : Type*} [AddCommMonoid M] [Module A M]
+
+/-- **The ambient-scalar bridge.** Membership in `rⁿ • M₀` is stated in Mathlib's terms with the
+subring scalar `r : S`, while a caller typically holds the ambient `s : A`. This is the crossing,
+so the coercion plumbing is done once here.
+
+Only this direction holds: the converse would need multiplication by `sⁿ` to be injective.
+
+Not `@[simp]`: the left-hand side is already reducible by
+`Submodule.mem_smul_pointwise_iff_exists`, so simp would rather rewrite it than close it, and the
+simpNF linter says so. This is a bridge to apply, not a normalisation. -/
+theorem pow_smul_mem_pow_smul {S : Subring A} (M₀ : Submodule S M) {s : A} (hs0 : s ∈ S) {y : M}
+    (hy : y ∈ M₀) (n : ℕ) : s ^ n • y ∈ (⟨s, hs0⟩ : S) ^ n • M₀ :=
+  Submodule.mem_smul_pointwise_iff_exists _ _ _ |>.mpr
+    ⟨y, hy, by rw [Subring.smul_def]; push_cast; rfl⟩
+
+/-- **The family `rⁿ • M₀` is antitone in `n`.** Raising the exponent multiplies by a further
+`r`, and `Submodule.smul_le_self_of_tower` says that shrinks the submodule. -/
+theorem pow_smul_antitone {S : Subring A} (M₀ : Submodule S M) {r : S} :
+    Antitone fun n : ℕ ↦ r ^ n • M₀ := by
+  intro i j hij
+  obtain ⟨d, rfl⟩ := Nat.exists_eq_add_of_le hij
+  calc r ^ (i + d) • M₀ = r ^ i • (r ^ d • M₀) := by rw [pow_add, mul_smul]
+    _ ≤ r ^ i • M₀ := smul_mono_right _ (M₀.smul_le_self_of_tower _)
+
+/-- **A submodule over a subring absorbs further powers of a scalar from that subring**: raising
+the exponent cannot leave `M₀`, because the extra factor is itself a scalar from `S`. -/
+theorem pow_add_smul_mem {S : Subring A} (M₀ : Submodule S M) {s : A} (hs0 : s ∈ S)
+    (j k : ℕ) (z : M) (hz : s ^ k • z ∈ M₀) : s ^ (j + k) • z ∈ M₀ := by
+  have he : s ^ (j + k) • z = (⟨s, hs0⟩ : S) ^ j • (s ^ k • z) := by
+    rw [Subring.smul_def, ← smul_assoc, smul_eq_mul]
+    congr 1
+    push_cast
+    rw [pow_add]
+  rw [he]; exact M₀.smul_mem _ hz
+
+/-- **Scaling into `sⁿ • M₀`.** If `c` factors as `s ^ (n + k) • b` with `b : S`, and `s ^ k • m`
+already lies in `M₀`, then `c • m` lies in `sⁿ • M₀`.
+
+This is the step that both a submodules-basis `smul` condition and a module-filter-basis
+`smul_right'` axiom reduce to, which is why it is stated once here rather than inline at each. -/
+theorem smul_mem_pow_smul {S : Subring A} (M₀ : Submodule S M) {s : A} (hs0 : s ∈ S) {b : A}
+    (hb : b ∈ S) {c : A} {m : M} {n k : ℕ} (hcb : s ^ (n + k) • b = c)
+    (hk : s ^ k • m ∈ M₀) : c • m ∈ (⟨s, hs0⟩ : S) ^ n • M₀ := by
+  have hmem : (⟨b, hb⟩ : S) • (s ^ k • m) ∈ M₀ := M₀.smul_mem _ hk
+  have he : c • m = ((⟨s, hs0⟩ : S) ^ n) • ((⟨b, hb⟩ : S) • (s ^ k • m)) := by
+    have hscal : ((⟨s, hs0⟩ : S) ^ n • (⟨b, hb⟩ : S)) • (s ^ k) = c := by
+      simp only [Subring.smul_def, smul_eq_mul]
+      push_cast
+      rw [← hcb, smul_eq_mul, pow_add]
+      exact mul_right_comm _ _ _
+    rw [← smul_assoc, ← smul_assoc, hscal]
+  rw [he]
+  exact Submodule.smul_mem_pointwise_smul _ _ _ hmem
+
+section Ring
+
+variable {α R M : Type*} [Ring α] [Ring R] [AddCommGroup M] [Module α M] [Module R M]
+  [SMulCommClass α R M]
+
+/-- **Negating the scalar does not change the image.** Over a ring of scalars,
+`(-a) • N = -(a • N)`, and a submodule is its own negation. -/
+@[simp]
+theorem neg_smul_eq_smul (a : α) (N : Submodule R M) : (-a) • N = a • N :=
+  SetLike.coe_injective <| by
+    rw [coe_pointwise_smul, Set.neg_smul_set, ← coe_pointwise_smul, ← coe_set_neg, neg_eq_self]
+
+/-- A unit `u` of a ring stabilizes an additive subgroup `L` exactly when multiplication by `u` and
+by `u⁻¹` both carry `L` into itself. -/
+theorem mem_stabilizer_units_iff {R : Type*} [Ring R] {L : Submodule ℤ R} {u : Rˣ} :
+    u ∈ MulAction.stabilizer Rˣ L ↔
+      (∀ l ∈ L, (u : R) * l ∈ L) ∧ ∀ l ∈ L, ((u⁻¹ : Rˣ) : R) * l ∈ L := by
+  have hle {v : Rˣ} : v • L ≤ L ↔ ∀ l ∈ L, (v : R) * l ∈ L := by
+    simp [IsConcreteLE.le_iff, mem_smul_pointwise_iff_exists, Units.smul_def]
+  rw [MulAction.mem_stabilizer_iff, ← hle, ← hle]
+  refine ⟨fun h ↦ ⟨h.le, ?_⟩, fun ⟨h, h'⟩ ↦ h.antisymm fun l hl ↦ ?_⟩
+  · calc u⁻¹ • L = u⁻¹ • u • L := by rw [h]
+      _ ≤ L := (inv_smul_smul u L).le
+  · have := smul_mem_pointwise_smul _ u L (h' (smul_mem_pointwise_smul l u⁻¹ L hl))
+    rwa [smul_inv_smul] at this
+
+end Ring
+
+end Submodule
+
+namespace TauCeti
+
+section Monoid
+
+variable {S M R : Type*} [Semiring S] [Monoid R]
+  [AddCommMonoid M] [Module S M] [DistribMulAction R M] [SMulCommClass R S M]
+
+/-- **An element `r` fixed on the left by `f` carries the whole module into `f • M`**: if
+`f * r = r` then every multiple of `r` lies in `f • M`. No idempotency is needed. -/
+theorem smul_mem_smul_top_of_mul_eq_self {f r : R} (hr : f * r = r) (x : M) :
+    r • x ∈ f • (⊤ : Submodule S M) := by
+  rw [← hr, mul_smul]
+  exact Submodule.smul_mem_pointwise_smul _ _ _ trivial
+
+end Monoid
+
+section Semiring
+
+variable {S M R : Type*} [Semiring S] [Semiring R]
+  [AddCommMonoid M] [Module S M] [Module R M] [SMulCommClass R S M]
+
+/-- **An element that kills `e` on the right annihilates `e • M`**: if `r * e = 0` then `r` sends
+every element of `e • M` to zero. No idempotency is needed. -/
+theorem smul_eq_zero_of_mul_eq_zero_of_mem_smul_top {r e : R} (hr : r * e = 0) {x : M}
+    (hx : x ∈ e • (⊤ : Submodule S M)) : r • x = 0 := by
+  obtain ⟨y, -, rfl⟩ := (Submodule.mem_smul_pointwise_iff_exists _ _ _).1 hx
+  rw [smul_smul, hr, zero_smul]
+
+end Semiring
+
+end TauCeti

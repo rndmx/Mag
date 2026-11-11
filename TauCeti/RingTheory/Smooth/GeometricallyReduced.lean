@@ -1,0 +1,137 @@
+/-
+Copyright (c) 2026 The Tau Ceti contributors. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: The Tau Ceti contributors
+Adapted from Tau Ceti (github.com/TauCetiProject/TauCeti, commit d2083f0); see TauCeti/CHANGES.md
+-/
+
+import Mathlib.RingTheory.Nilpotent.GeometricallyReduced
+import Mathlib.RingTheory.Smooth.Basic
+import Mathlib.RingTheory.Ideal.MinimalPrime.Noetherian
+import Mathlib.RingTheory.LocalProperties.Submodule
+import Mathlib.RingTheory.RingHom.StandardSmooth
+import Mathlib.RingTheory.TensorProduct.Pi
+import Mathlib.RingTheory.TensorProduct.Quotient
+import Mathlib.RingTheory.Unramified.Field
+
+/-!
+# Reducedness of smooth algebras
+
+A smooth algebra over a reduced commutative ring is reduced. The proof first treats integral
+domains: a standard-smooth algebra embeds into its étale generic fibre over a polynomial ring,
+and a standard-smooth localization cover gives the smooth case. For a reduced base with finitely
+many minimal primes (for instance a Noetherian one), embed the base into the finite product of its
+minimal-prime domain quotients and use flatness.
+Finally, Noetherian descent and passage through finitely generated subalgebras give the result
+over an arbitrary reduced base.
+
+Over any commutative ring, a smooth algebra is geometrically reduced: its base changes to
+algebraic closures of residue fields are smooth over fields, hence reduced. This supplies the
+reducedness of geometric fibres used in the study of smooth affine group schemes.
+
+## Main declarations
+
+* `TauCeti.isReduced_of_smooth`: a smooth algebra over a reduced commutative ring is reduced.
+* `TauCeti.isReduced_quotient_map_of_smooth`: if `A` is smooth over `R` and `R ⧸ I` is reduced,
+  then `A ⧸ I A` is reduced.
+* `TauCeti.isGeometricallyReduced_of_smooth`: the instance making a smooth algebra over any
+  commutative ring geometrically reduced.
+
+## References
+
+* [The Stacks Project, Lemma 10.163.7](https://stacks.math.columbia.edu/tag/033B).
+* The Stacks Project, Section 10.140, *Smooth algebras over fields*.
+-/
+
+section
+
+open scoped TensorProduct
+
+namespace TauCeti
+
+universe u v
+
+theorem isReduced_of_standardSmooth_of_isDomain
+    (R : Type u) (A : Type v) [CommRing R] [IsDomain R] [CommRing A] [Algebra R A]
+    [Algebra.IsStandardSmooth R A] : IsReduced A := by
+  obtain ⟨n, g, _, hg⟩ :=
+    (RingHom.isStandardSmooth_algebraMap (R := R) (S := A)).mpr ‹_› |>.exists_etale_mvPolynomial
+  let S := MvPolynomial (Fin n) R
+  let _ : Algebra S A := g.toAlgebra
+  have : Algebra.Etale S A := hg.toAlgebra
+  -- The generic fibre is étale over a field, hence reduced, and `A` embeds into it.
+  let F := FractionRing S
+  have : IsReduced (F ⊗[S] A) := Algebra.FormallyUnramified.isReduced_of_field F _
+  exact isReduced_of_injective Algebra.TensorProduct.includeRight
+    (Algebra.TensorProduct.includeRight_injective (IsFractionRing.injective S F))
+
+theorem isReduced_of_smooth_of_isDomain
+    (R : Type u) (A : Type v) [CommRing R] [IsDomain R] [CommRing A] [Algebra R A]
+    [Algebra.Smooth R A] : IsReduced A := by
+  obtain ⟨s, hs, hsmooth⟩ := Algebra.Smooth.exists_span_eq_top_isStandardSmooth R A
+  refine ⟨fun x hx ↦ Module.eq_zero_of_isLocalized_span s hs
+    (fun r : s ↦ Localization.Away r.1)
+    (fun r : s ↦ Algebra.linearMap A (Localization.Away r.1)) x fun r ↦ ?_⟩
+  have := hsmooth r.1 r.2
+  have := isReduced_of_standardSmooth_of_isDomain R (Localization.Away r.1)
+  exact (hx.map (algebraMap A (Localization.Away r.1))).eq_zero
+
+theorem isReduced_of_smooth_of_finite_minimalPrimes
+    (R : Type u) (A : Type v) [CommRing R] [IsReduced R] (hR : (minimalPrimes R).Finite)
+    [CommRing A] [Algebra R A] [Algebra.Smooth R A] : IsReduced A := by
+  classical
+  let P := minimalPrimes R
+  let : Fintype P := hR.fintype
+  have (p : P) : p.1.IsPrime := p.2.1.1
+  let Q (p : P) := R ⧸ p.1
+  -- A reduced ring embeds into the product of its minimal-prime quotients.
+  have hinj : Function.Injective (algebraMap R (∀ p : P, Q p)) := by
+    have hker : RingHom.ker (algebraMap R (∀ p : P, Q p)) = ⨅ p : P, p.1 :=
+      Ideal.ker_Pi_Quotient_mk (fun p : P ↦ p.1)
+    rw [RingHom.injective_iff_ker_eq_bot, hker]
+    simp only [P, minimalPrimes, iInf_subtype, ← sInf_eq_iInf, Ideal.sInf_minimalPrimes,
+      Ideal.radical_bot_of_isReduced]
+  -- Flatness preserves the embedding after tensoring with the smooth algebra.
+  have (p : P) : IsReduced (A ⊗[R] Q p) :=
+    have := isReduced_of_smooth_of_isDomain (Q p) (Q p ⊗[R] A)
+    isReduced_of_injective _ (Algebra.TensorProduct.comm R A (Q p)).injective
+  have := isReduced_of_injective _ (Algebra.TensorProduct.piRight R R A Q).injective
+  exact isReduced_of_injective _ (Algebra.TensorProduct.includeLeft_injective (S := R) hinj)
+
+/-- A smooth algebra over a reduced commutative ring is reduced. -/
+@[stacks 033B]
+theorem isReduced_of_smooth
+    (R : Type u) (A : Type v) [CommRing R] [IsReduced R]
+    [CommRing A] [Algebra R A] [Algebra.Smooth R A] : IsReduced A := by
+  obtain ⟨R₀, A₀, _, _, _, _, _, _, _, _, ⟨e⟩⟩ :=
+    Algebra.Smooth.exists_finiteType ℤ R A
+  have : IsNoetherianRing R₀ := Algebra.FiniteType.isNoetherianRing ℤ _
+  -- `R` is the union of its finitely generated `R₀`-subalgebras, which are Noetherian.
+  have : IsReduced (A₀ ⊗[R₀] R) := by
+    refine IsReduced.tensorProduct_of_flat_of_forall_fg fun B hB ↦ ?_
+    have : Algebra.FiniteType R₀ B := ⟨B.fg_top.mpr hB⟩
+    have : IsNoetherianRing B := Algebra.FiniteType.isNoetherianRing R₀ _
+    have : IsReduced B := isReduced_of_injective B.val Subtype.val_injective
+    have := isReduced_of_smooth_of_finite_minimalPrimes B (B ⊗[R₀] A₀)
+      (minimalPrimes.finite_of_isNoetherianRing B)
+    exact isReduced_of_injective _ (Algebra.TensorProduct.comm R₀ A₀ B).injective
+  exact isReduced_of_injective _
+    (e.toRingEquiv.trans (Algebra.TensorProduct.comm R₀ R A₀).toRingEquiv).injective
+
+/-- If `R ⧸ I` is reduced and `A` is smooth over `R`, then `A ⧸ I A` is reduced: it is the base
+change `(R ⧸ I) ⊗[R] A`, which is smooth over `R ⧸ I`. -/
+theorem isReduced_quotient_map_of_smooth
+    (R : Type u) (A : Type v) [CommRing R] [CommRing A] [Algebra R A] [Algebra.Smooth R A]
+    (I : Ideal R) [IsReduced (R ⧸ I)] : IsReduced (A ⧸ I.map (algebraMap R A)) := by
+  have := isReduced_of_smooth (R ⧸ I) ((R ⧸ I) ⊗[R] A)
+  exact isReduced_of_injective _
+    ((Algebra.TensorProduct.quotIdealMapEquivTensorQuot A I).toRingEquiv.trans
+      (Algebra.TensorProduct.comm R A (R ⧸ I)).toRingEquiv).injective
+
+/-- A smooth algebra over a commutative ring is geometrically reduced. -/
+instance isGeometricallyReduced_of_smooth
+    (R : Type u) (A : Type v) [CommRing R] [CommRing A] [Algebra R A]
+    [Algebra.Smooth R A] : Algebra.IsGeometricallyReduced R A :=
+  ⟨fun p _ ↦ isReduced_of_smooth (AlgebraicClosure p.ResidueField) _⟩
+
+end TauCeti

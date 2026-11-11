@@ -1,0 +1,245 @@
+/-
+Copyright (c) 2026 The Tau Ceti contributors. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Codex
+-/
+
+import TauCeti.Compat.All
+import TauCeti.Algebra.AlgebraicGroup.Derived.Basic
+import TauCeti.Algebra.AlgebraicGroup.HopfIdeal.Quotient.Kernel.Basic
+import TauCeti.Algebra.HopfAlgebra.HopfIdeal.Map
+
+/-!
+# Functoriality of the derived subgroup
+
+A homomorphism of affine group schemes carries commutators to commutators, and therefore
+restricts to a homomorphism of their derived closed subgroup schemes. In coordinate Hopf
+algebras, a morphism `f : H ⟶ K` sends the ideal defining the derived subgroup of `Spec H`
+into the ideal defining the derived subgroup of `Spec K`. It consequently induces a morphism
+
+```text
+H / derivedDefiningIdeal H ⟶ K / derivedDefiningIdeal K.
+```
+
+Using the naturality of the commutator coordinate morphism, this file constructs the induced
+quotient morphism and packages its identity and composition laws as an endofunctor on commutative
+Hopf algebras. Applying `Spec` reverses this map to the expected restriction between derived
+subgroup schemes.
+
+## Main declarations
+
+* `TauCeti.CommHopfAlgCat.derivedDefiningIdeal_map_le`: the derived defining ideals are
+  functorial.
+* `CommHopfAlgCat.Hom.kernelHopfIdeal_le_derivedDefiningIdeal`: a morphism from a
+  cocommutative Hopf algebra has kernel contained in the derived defining ideal.
+* `TauCeti.CommHopfAlgCat.derivedMap`: the induced morphism on derived coordinate algebras.
+* `TauCeti.CommHopfAlgCat.derivedFunctor`: the derived coordinate algebra as an endofunctor.
+* `TauCeti.CommHopfAlgCat.derivedQuotientNatTrans`: the ambient quotient maps as a natural
+  transformation to the derived-coordinate functor.
+
+## References
+
+* J. S. Milne, *Algebraic Groups* (2017), §6d, especially Proposition 6.17.
+* W. C. Waterhouse, *Introduction to Affine Group Schemes*, Chapter 10.
+-/
+
+section
+
+open _root_.CommHopfAlgCat _root_.CommHopfAlgCat.Hom
+
+open CategoryTheory WithConv
+open scoped commutatorElement TensorProduct
+
+namespace TauCeti
+
+universe u v w
+
+namespace CommHopfAlgCat
+
+section Semiring
+
+variable {R : Type u} [CommSemiring R]
+variable {H : Type v} {K : Type w} [CommSemiring H] [CommSemiring K]
+variable [_root_.HopfAlgebra R H] [_root_.HopfAlgebra R K]
+
+/-- A morphism of commutative Hopf algebras sends the derived defining ideal into the derived
+defining ideal of its target. Contravariantly, a group-scheme homomorphism sends the source
+derived subgroup into the target derived subgroup. -/
+theorem derivedDefiningIdeal_map_le (f : H →ₐc[R] K) :
+    (derivedDefiningIdeal (R := R) H).map f ≤ derivedDefiningIdeal (R := R) K := by
+  rw [le_derivedDefiningIdeal_iff, HopfIdeal.map_toIdeal, Ideal.map_le_iff_le_comap]
+  intro x hx
+  rw [Ideal.mem_comap, RingHom.mem_ker]
+  have hzero : HopfAlgebra.commutatorAlgHom (R := R) (H := H) x = 0 :=
+    RingHom.mem_ker.mp
+      (derivedDefiningIdeal_toIdeal_le_ker (R := R) H ((HopfIdeal.mem_toIdeal).mpr hx))
+  have hnatural := DFunLike.congr_fun (HopfAlgebra.map_comp_commutatorAlgHom f) x
+  simpa only [AlgHom.comp_apply, AlgHom.toRingHom_eq_coe, RingHom.coe_coe,
+    BialgHom.coe_toAlgHom, map_zero] using
+    hnatural.symm.trans (congrArg (Bialgebra.TensorProduct.map f f) hzero)
+
+end Semiring
+
+variable {R : Type u} [CommRing R]
+variable {H K L : _root_.CommHopfAlgCat.{v} R}
+
+/-- An isomorphism of commutative Hopf algebras preserves the derived defining ideal. -/
+@[simp]
+theorem comapOfSurjective_derivedDefiningIdeal (e : H ≅ K) :
+    (derivedDefiningIdeal K).comapOfSurjective e.hom.hom
+        (ConcreteCategory.bijective_of_isIso e.hom).2 = derivedDefiningIdeal H := by
+  apply le_antisymm
+  · intro x hx
+    have hxK := HopfIdeal.mem_comapOfSurjective.mp hx
+    have hxH := derivedDefiningIdeal_map_le e.inv.hom
+      (HopfIdeal.mem_map_of_mem e.inv.hom hxK)
+    simpa using hxH
+  · exact (HopfIdeal.map_le_iff_le_comapOfSurjective
+      (ConcreteCategory.bijective_of_isIso e.hom).2).mp
+        (derivedDefiningIdeal_map_le e.hom.hom)
+
+/-- The coordinate morphism induced by a homomorphism on the coordinate algebras of the derived
+subgroups. After applying `Spec`, this is the restriction of the original group-scheme
+homomorphism to the derived subgroup schemes. -/
+noncomputable def derivedMap (f : H ⟶ K) :
+    quotient H (derivedDefiningIdeal (R := R) H) ⟶
+      quotient K (derivedDefiningIdeal (R := R) K) :=
+  liftQuotient (derivedDefiningIdeal (R := R) H)
+    (f ≫ mkQuotient K (derivedDefiningIdeal (R := R) K)) <| by
+      intro x hx
+      rw [RingHom.mem_ker]
+      have hmem : f.hom x ∈ derivedDefiningIdeal (R := R) K :=
+        derivedDefiningIdeal_map_le f.hom (HopfIdeal.mem_map_of_mem f.hom hx)
+      exact (mkQuotient_eq_zero_iff K (derivedDefiningIdeal (R := R) K) (f.hom x)).2 hmem
+
+/-- On quotient classes, the induced derived-coordinate map applies the ambient morphism before
+taking the target quotient class. -/
+@[simp]
+theorem derivedMap_mk (f : H ⟶ K) (x : H) :
+    (derivedMap f).hom
+        (Ideal.Quotient.mk (derivedDefiningIdeal (R := R) H).toIdeal x) =
+      Ideal.Quotient.mkₐ R (derivedDefiningIdeal (R := R) K).toIdeal (f.hom x) := by
+  rw [← Ideal.Quotient.mkₐ_eq_mk (R₁ := R)]
+  rw [derivedMap, liftQuotient_mk, _root_.CommHopfAlgCat.comp_apply, mkQuotient_apply]
+
+/-- The induced map on derived coordinate algebras commutes with the ambient quotient maps. This
+is the coordinate square expressing that the derived-subgroup map restricts the original map. -/
+@[simp]
+theorem mkQuotient_comp_derivedMap (f : H ⟶ K) :
+    mkQuotient H (derivedDefiningIdeal (R := R) H) ≫ derivedMap f =
+      f ≫ mkQuotient K (derivedDefiningIdeal (R := R) K) :=
+  mkQuotient_comp_liftQuotient _ _ _
+
+/-- The map induced on derived coordinate algebras by the identity is the identity. -/
+@[simp]
+theorem derivedMap_id (H : _root_.CommHopfAlgCat.{v} R) :
+    derivedMap (𝟙 H) = 𝟙 (quotient H (derivedDefiningIdeal (R := R) H)) := by
+  symm
+  apply liftQuotient_unique
+  simp
+
+/-- Maps induced on derived coordinate algebras respect composition. -/
+@[simp]
+theorem derivedMap_comp (f : H ⟶ K) (g : K ⟶ L) :
+    derivedMap (f ≫ g) = derivedMap f ≫ derivedMap g := by
+  symm
+  apply liftQuotient_unique
+  rw [← Category.assoc, mkQuotient_comp_derivedMap, Category.assoc,
+    mkQuotient_comp_derivedMap]
+  rw [Category.assoc]
+
+/-- Taking the coordinate algebra of the derived subgroup is an endofunctor on commutative Hopf
+algebras. On affine group schemes, composition with the contravariant spectrum functor gives the
+covariant derived-subgroup construction. -/
+noncomputable def derivedFunctor :
+    _root_.CommHopfAlgCat.{v} R ⥤ _root_.CommHopfAlgCat.{v} R where
+  obj H := quotient H (derivedDefiningIdeal (R := R) H)
+  map := derivedMap
+  map_id := derivedMap_id
+  map_comp := derivedMap_comp
+
+/-- The derived-coordinate functor acts on objects by quotienting by the derived defining ideal. -/
+@[simp]
+theorem derivedFunctor_obj (H : _root_.CommHopfAlgCat.{v} R) :
+    (derivedFunctor (R := R)).obj H = quotient H (derivedDefiningIdeal (R := R) H) :=
+  (rfl)
+
+/-- The derived-coordinate functor acts on morphisms by the induced quotient morphism. -/
+@[simp]
+theorem derivedFunctor_map (f : H ⟶ K) :
+    (derivedFunctor (R := R)).map f =
+      eqToHom (derivedFunctor_obj H) ≫ derivedMap f ≫
+        eqToHom (derivedFunctor_obj K).symm :=
+  (rfl)
+
+/-- The quotient morphisms from an ambient coordinate Hopf algebra to its derived-subgroup
+coordinate algebra form a natural transformation. After applying the contravariant spectrum
+functor, this is the natural closed immersion of the derived subgroup into the ambient group. -/
+noncomputable def derivedQuotientNatTrans :
+    𝟭 (_root_.CommHopfAlgCat.{v} R) ⟶ derivedFunctor (R := R) where
+  app H := mkQuotient H (derivedDefiningIdeal (R := R) H) ≫
+    eqToHom (derivedFunctor_obj H).symm
+  naturality {H K} f := by
+    rw [derivedFunctor_map]
+    -- The naturality field retains the identity- and derived-functor object wrappers; expose
+    -- their quotient-coordinate shape so the established commuting square applies.
+    change f ≫ mkQuotient K (derivedDefiningIdeal (R := R) K) =
+      mkQuotient H (derivedDefiningIdeal (R := R) H) ≫ derivedMap f
+    exact (mkQuotient_comp_derivedMap f).symm
+
+/-- The component of the derived quotient natural transformation is the coordinate quotient
+morphism defining the derived closed subgroup. -/
+@[simp]
+theorem derivedQuotientNatTrans_app (H : _root_.CommHopfAlgCat.{v} R) :
+    (derivedQuotientNatTrans (R := R)).app H =
+      mkQuotient H (derivedDefiningIdeal (R := R) H) ≫
+        eqToHom (derivedFunctor_obj H).symm :=
+  (rfl)
+
+end CommHopfAlgCat
+
+end TauCeti
+
+namespace BialgHom
+
+open TauCeti TauCeti.CommHopfAlgCat
+
+/-- For an injective morphism between flat commutative Hopf algebras, the commutator
+coordinate morphism vanishes on every element whose image lies in the target's derived
+defining ideal. -/
+theorem commutatorAlgHom_eq_zero_of_map_mem_derivedDefiningIdeal
+    {R H K : Type*} [CommSemiring R] [CommSemiring H] [CommSemiring K]
+    [HopfAlgebra R H] [HopfAlgebra R K] [Module.Flat R H] [Module.Flat R K]
+    (f : H →ₐc[R] K) (hf : Function.Injective f) {x : H}
+    (hx : f x ∈ derivedDefiningIdeal (R := R) K) :
+    TauCeti.HopfAlgebra.commutatorAlgHom (R := R) (H := H) x = 0 := by
+  -- The bialgebra tensor map has the same underlying function as the tensor map of
+  -- the underlying linear maps, so the linear-map injectivity lemma applies definitionally.
+  have hmap : Function.Injective (Bialgebra.TensorProduct.map f f) :=
+    TensorProduct.map_injective_of_flat_flat
+      (f : H →ₗ[R] K) (f : H →ₗ[R] K) hf hf
+  apply hmap
+  have hnatural : (Bialgebra.TensorProduct.map f f)
+      (TauCeti.HopfAlgebra.commutatorAlgHom (R := R) (H := H) x) =
+        TauCeti.HopfAlgebra.commutatorAlgHom (R := R) (H := K) (f x) :=
+    DFunLike.congr_fun (TauCeti.HopfAlgebra.map_comp_commutatorAlgHom f) x
+  rw [hnatural, commutatorAlgHom_eq_zero_of_mem_derivedDefiningIdeal K hx, map_zero]
+
+end BialgHom
+
+namespace CommHopfAlgCat.Hom
+
+open TauCeti TauCeti.CommHopfAlgCat
+
+/-- A homomorphism to a commutative affine group kills the derived subgroup of its source.
+In coordinates, the scheme-theoretic kernel ideal of a morphism from a cocommutative Hopf
+algebra is contained in the derived defining ideal, without flatness or injectivity assumptions. -/
+theorem kernelHopfIdeal_le_derivedDefiningIdeal
+    {R : Type u} [CommRing R] {Q H : CommHopfAlgCat.{v} R}
+    [Coalgebra.IsCocomm R Q] (f : Q ⟶ H) :
+    kernelHopfIdeal f ≤ derivedDefiningIdeal H := by
+  rw [kernelHopfIdeal_def,
+    ← (derivedDefiningIdeal_eq_augmentation_iff_isCocomm Q).mpr inferInstance]
+  exact derivedDefiningIdeal_map_le f.hom
+
+end CommHopfAlgCat.Hom

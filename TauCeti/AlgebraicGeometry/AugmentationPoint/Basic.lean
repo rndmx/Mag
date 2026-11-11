@@ -1,0 +1,66 @@
+/-
+Copyright (c) 2026 The Tau Ceti contributors. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: The Tau Ceti contributors
+Adapted from Tau Ceti (github.com/TauCetiProject/TauCeti, commit d2083f0); see TauCeti/CHANGES.md
+-/
+
+import Mathlib.AlgebraicGeometry.Scheme
+
+/-!
+# The spectrum point defined by an augmentation
+
+An algebra homomorphism from a commutative algebra to its ground field determines a rational point
+of the algebra's prime spectrum. This file records that point and its underlying prime ideal.
+
+## Main declarations
+
+* `AlgHom.kernelPoint`: the point cut out by the kernel of an augmentation.
+* `AlgHom.comap_kernelPoint`: contraction of a kernel point is the kernel point of the
+  composite algebra homomorphism.
+-/
+
+section
+
+open AlgebraicGeometry IsLocalRing
+
+namespace AlgHom
+
+universe u v w
+
+variable {k : Type u} [Field k]
+variable {H : Type v} [CommRing H] [Algebra k H]
+variable (f : H →ₐ[k] k)
+
+/-- The point of `Spec H` defined by an augmentation `f : H →ₐ[k] k`. Its prime ideal is
+`ker f`. -/
+def kernelPoint : Spec (CommRingCat.of H) :=
+  PrimeSpectrum.comap (f : H →+* k) (closedPoint k)
+
+/-- The prime ideal of an augmentation point is the kernel of the augmentation. -/
+@[simp]
+theorem kernelPoint_asIdeal :
+    (kernelPoint f).asIdeal = RingHom.ker (f : H →+* k) := by
+  rw [kernelPoint, PrimeSpectrum.comap_asIdeal]
+  dsimp only [closedPoint]
+  rw [IsLocalRing.maximalIdeal_eq_bot]
+  rfl
+
+/-- A kernel point belongs to a basic open exactly when its defining homomorphism is
+nonzero on the defining element. -/
+@[simp]
+theorem kernelPoint_mem_basicOpen_iff (a : H) :
+    (kernelPoint f : PrimeSpectrum H) ∈ PrimeSpectrum.basicOpen a ↔ f a ≠ 0 := by
+  -- Expose ideal membership to bridge the scheme carrier and the prime-spectrum basic open.
+  change a ∉ (kernelPoint f).asIdeal ↔ f a ≠ 0
+  rw [kernelPoint_asIdeal, RingHom.mem_ker]
+  rfl
+
+/-- Contracting a kernel point along an algebra homomorphism gives the kernel point of the
+composite algebra homomorphism. -/
+@[simp]
+theorem comap_kernelPoint {A : Type w} [CommRing A] [Algebra k A] (g : A →ₐ[k] H) :
+    PrimeSpectrum.comap (g : A →+* H) (kernelPoint f) = kernelPoint (f.comp g) :=
+  PrimeSpectrum.comap_comp_apply (g : A →+* H) (f : H →+* k) (closedPoint k)
+
+end AlgHom

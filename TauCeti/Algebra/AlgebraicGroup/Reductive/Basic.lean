@@ -1,0 +1,260 @@
+/-
+Copyright (c) 2026 The Tau Ceti contributors. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Codex
+Adapted from Tau Ceti (github.com/TauCetiProject/TauCeti, commit d2083f0); see TauCeti/CHANGES.md
+-/
+
+import TauCeti.Compat.All
+import TauCeti.Algebra.AlgebraicGroup.Radical.Basic
+import TauCeti.Algebra.AlgebraicGroup.Unipotent.Basic
+import Mathlib.RingTheory.Etale.Descent
+
+/-!
+# Reductive affine groups
+
+A finite-type affine group over a field is reductive when it is smooth and geometrically
+connected and, after extension to an algebraic closure, it has no nontrivial connected normal
+smooth unipotent closed subgroup. In coordinate-Hopf-algebra terms, a closed subgroup of the
+geometric fibre is a Hopf-ideal quotient. The subgroup is trivial exactly when its defining Hopf
+ideal is the augmentation ideal.
+
+`TauCeti.Algebra.AlgebraicGroup.Unipotent.Radical.Reductive.Basic` proves this formulation
+equivalent to triviality of the geometric unipotent radical. The formulation also avoids asserting
+descent of the geometric unipotent radical over an imperfect field.
+
+Instantiating the definition at the zero Hopf ideal—the whole geometric fibre as a subgroup of
+itself—shows that if the geometric fibre of a reductive group is itself unipotent, its coordinate
+Hopf algebra is the algebraic closure of the ground field. The resulting bialgebra equivalence is
+the precise affine-group statement that the geometric fibre is the trivial group.
+
+## Main declarations
+
+* `TauCeti.reductiveCommHopfAlgProperty`: reductivity for finite-type commutative Hopf algebras
+  over a field.
+* `TauCeti.ReductiveCommHopfAlgCat`: the corresponding full subcategory.
+* `TauCeti.reductiveCommHopfAlgProperty_of_geometricFiber_iso`: establish reductivity using an
+  isomorphic direct model of the geometric fibre.
+* `TauCeti.reductiveCommHopfAlgProperty_of_geometricFiber_iso_of_smooth_connected`: establish
+  reductivity from a smooth, geometrically connected direct model of the geometric fibre.
+* `TauCeti.reductiveCommHopfAlgProperty.eq_augmentation`: every connected normal smooth
+  unipotent closed subgroup of a reductive group's geometric fibre is trivial.
+* `TauCeti.reductiveCommHopfAlgProperty.bot_eq_augmentation`: the zero Hopf ideal of a reductive
+  group with unipotent geometric fibre is its augmentation ideal.
+* `TauCeti.reductiveCommHopfAlgProperty.geometricFiberCounitBialgEquiv`: a reductive group with
+  geometrically unipotent geometric fibre has trivial geometric fibre.
+
+## References
+
+* J. S. Milne, *Algebraic Groups* (2017), §6.46 and §19.b.
+* T. A. Springer, *Linear Algebraic Groups*, Chapter 8.
+* B. Conrad, *Reductive Group Schemes*, Section 3.
+-/
+
+section
+
+open scoped TensorProduct
+
+open CategoryTheory
+
+namespace TauCeti
+
+universe u
+
+noncomputable section
+
+/-- The object property selecting reductive finite-type commutative Hopf algebras over a field.
+
+The first two conjuncts express smoothness and geometric connectedness of the ambient group. The
+last says that every connected normal smooth unipotent closed subgroup of the geometric fibre is
+the identity subgroup. A Hopf ideal `I` cuts out that subgroup contravariantly, so identity means
+`I` is the augmentation ideal, not the zero ideal. -/
+def reductiveCommHopfAlgProperty (k : Type u) [Field k] :
+    ObjectProperty (FiniteTypeCommHopfAlgCat.{u, u} k) :=
+  geometricNormalSubgroupFreeCommHopfAlgProperty k
+    (smoothUnipotentCommHopfAlgProperty (AlgebraicClosure k))
+
+/-- Reductivity means smoothness, geometric connectedness, and absence of nontrivial connected
+normal smooth unipotent closed subgroups after extension to an algebraic closure. -/
+@[simp]
+theorem reductiveCommHopfAlgProperty_iff (k : Type u) [Field k]
+    (H : FiniteTypeCommHopfAlgCat.{u, u} k) :
+    reductiveCommHopfAlgProperty k H ↔
+      Algebra.Smooth k H ∧
+        geometricallyConnectedCommHopfAlgProperty k H.obj ∧
+          ∀ I : HopfIdeal (AlgebraicClosure k)
+              (FiniteTypeCommHopfAlgCat.baseChange (K := AlgebraicClosure k) H),
+            I.IsNormal →
+              geometricallyConnectedCommHopfAlgProperty (AlgebraicClosure k)
+                (FiniteTypeCommHopfAlgCat.quotient
+                  (FiniteTypeCommHopfAlgCat.baseChange (K := AlgebraicClosure k) H) I).obj →
+              smoothUnipotentCommHopfAlgProperty (AlgebraicClosure k)
+                (FiniteTypeCommHopfAlgCat.quotient
+                  (FiniteTypeCommHopfAlgCat.baseChange (K := AlgebraicClosure k) H) I) →
+            I = HopfIdeal.augmentation (AlgebraicClosure k)
+              (FiniteTypeCommHopfAlgCat.baseChange (K := AlgebraicClosure k) H) :=
+  geometricNormalSubgroupFreeCommHopfAlgProperty_iff k
+    (smoothUnipotentCommHopfAlgProperty (AlgebraicClosure k)) H
+
+/-- Reductivity is invariant under isomorphisms of finite-type commutative Hopf algebras. -/
+instance (k : Type u) [Field k] :
+    (reductiveCommHopfAlgProperty k).IsClosedUnderIsomorphisms :=
+  inferInstanceAs ((geometricNormalSubgroupFreeCommHopfAlgProperty k
+    (smoothUnipotentCommHopfAlgProperty (AlgebraicClosure k))).IsClosedUnderIsomorphisms)
+
+/-- Establish reductivity by identifying the geometric fibre with a direct model on which normal
+smooth unipotent closed subgroups can be eliminated. This packages the transport of Hopf ideals,
+normality, the quotient property, and the augmentation ideal across the identification. -/
+theorem reductiveCommHopfAlgProperty_of_geometricFiber_iso
+    (k : Type u) [Field k] (H : FiniteTypeCommHopfAlgCat.{u, u} k)
+    (G : FiniteTypeCommHopfAlgCat.{u, u} (AlgebraicClosure k))
+    (hsmooth : Algebra.Smooth k H)
+    (hconnected : geometricallyConnectedCommHopfAlgProperty k H.obj)
+    (e : FiniteTypeCommHopfAlgCat.baseChange (K := AlgebraicClosure k) H ≅ G)
+    (htrivial : ∀ (I : HopfIdeal (AlgebraicClosure k) G), I.IsNormal →
+      smoothUnipotentCommHopfAlgProperty (AlgebraicClosure k)
+        (FiniteTypeCommHopfAlgCat.quotient G I) →
+      I = HopfIdeal.augmentation (AlgebraicClosure k) G) :
+    reductiveCommHopfAlgProperty k H := by
+  have hP : smoothUnipotentCommHopfAlgProperty (AlgebraicClosure k) =
+      (smoothCommHopfAlgProperty (AlgebraicClosure k) ⊓
+        geometricallyUnipotentPointsCommHopfAlgProperty (AlgebraicClosure k)).inverseImage
+          (forget₂ (FiniteTypeCommHopfAlgCat.{u, u} (AlgebraicClosure k))
+            (CommHopfAlgCat.{u} (AlgebraicClosure k))) := by
+    ext Q
+    simp only [smoothUnipotentCommHopfAlgProperty_iff, ObjectProperty.prop_inverseImage_iff,
+      ObjectProperty.prop_inf_iff, FiniteTypeCommHopfAlgCat.forget₂_commHopfAlgCat_obj,
+      smoothCommHopfAlgProperty_iff, geometricallyUnipotentPointsCommHopfAlgProperty_iff]
+  rw [reductiveCommHopfAlgProperty, hP]
+  apply geometricNormalSubgroupFreeCommHopfAlgProperty_of_geometricFiber_iso k
+    (smoothCommHopfAlgProperty (AlgebraicClosure k) ⊓
+      geometricallyUnipotentPointsCommHopfAlgProperty (AlgebraicClosure k))
+    H G.obj hsmooth hconnected
+    ((forget₂ (FiniteTypeCommHopfAlgCat.{u, u} (AlgebraicClosure k))
+      (CommHopfAlgCat.{u} (AlgebraicClosure k))).mapIso e)
+  intro I hI _ hU
+  apply htrivial I hI
+  rw [hP]
+  exact hU
+
+/-- Establish reductivity from a smooth, geometrically connected direct model of the geometric
+fibre, transporting those properties across the given base-change isomorphism. -/
+theorem reductiveCommHopfAlgProperty_of_geometricFiber_iso_of_smooth_connected
+    (k : Type u) [Field k] (H : FiniteTypeCommHopfAlgCat.{u, u} k)
+    (G : FiniteTypeCommHopfAlgCat.{u, u} (AlgebraicClosure k))
+    (e : FiniteTypeCommHopfAlgCat.baseChange (K := AlgebraicClosure k) H ≅ G)
+    (hsmooth : smoothCommHopfAlgProperty (AlgebraicClosure k) G.obj)
+    (hconnected : geometricallyConnectedCommHopfAlgProperty (AlgebraicClosure k) G.obj)
+    (htrivial : ∀ (I : HopfIdeal (AlgebraicClosure k) G), I.IsNormal →
+      smoothUnipotentCommHopfAlgProperty (AlgebraicClosure k)
+        (FiniteTypeCommHopfAlgCat.quotient G I) →
+      I = HopfIdeal.augmentation (AlgebraicClosure k) G) :
+    reductiveCommHopfAlgProperty k H := by
+  let K := AlgebraicClosure k
+  let e' := ((forget₂ (FiniteTypeCommHopfAlgCat.{u, u} K) (CommHopfAlgCat.{u} K)).mapIso e).symm
+  have hbaseSmooth : smoothCommHopfAlgProperty K
+      (FiniteTypeCommHopfAlgCat.baseChange (K := K) H).obj :=
+    (smoothCommHopfAlgProperty K).prop_of_iso e' hsmooth
+  -- `baseChange` bundles the tensor product; `coe_of` identifies its underlying algebra.
+  let _ : Algebra.Smooth K (K ⊗[k] H.obj) := by
+    simpa only [FiniteTypeCommHopfAlgCat.baseChange, CommHopfAlgCat.baseChange,
+      _root_.CommHopfAlgCat.coe_of] using
+      (smoothCommHopfAlgProperty_iff _).mp hbaseSmooth
+  exact reductiveCommHopfAlgProperty_of_geometricFiber_iso k H G
+    (Algebra.Smooth.of_smooth_tensorProduct_of_faithfullyFlat (R := k) (S := H.obj) K)
+    (geometricallyConnectedCommHopfAlgProperty.of_baseChange k K H.obj
+      ((geometricallyConnectedCommHopfAlgProperty K).prop_of_iso e' hconnected))
+    e htrivial
+
+/-- The category of reductive finite-type commutative Hopf algebras over a field. -/
+abbrev ReductiveCommHopfAlgCat (k : Type u) [Field k] :=
+  (reductiveCommHopfAlgProperty k).FullSubcategory
+
+namespace reductiveCommHopfAlgProperty
+
+variable {k : Type u} [Field k] {H : FiniteTypeCommHopfAlgCat.{u, u} k}
+
+/-- A reductive finite-type commutative Hopf algebra is smooth over its ground field. -/
+theorem smooth (hH : reductiveCommHopfAlgProperty k H) : Algebra.Smooth k H :=
+  geometricNormalSubgroupFreeCommHopfAlgProperty.smooth hH
+
+/-- A reductive finite-type commutative Hopf algebra is geometrically connected. -/
+theorem geometricallyConnected (hH : reductiveCommHopfAlgProperty k H) :
+    geometricallyConnectedCommHopfAlgProperty k H.obj :=
+  geometricNormalSubgroupFreeCommHopfAlgProperty.geometricallyConnected hH
+
+/-- Every connected normal smooth unipotent closed subgroup of the geometric fibre of a
+reductive group is the identity subgroup. -/
+theorem eq_augmentation (hH : reductiveCommHopfAlgProperty k H)
+    (I : HopfIdeal (AlgebraicClosure k)
+      (FiniteTypeCommHopfAlgCat.baseChange (K := AlgebraicClosure k) H))
+    (hI : I.IsNormal)
+    (hconnected : geometricallyConnectedCommHopfAlgProperty (AlgebraicClosure k)
+      (FiniteTypeCommHopfAlgCat.quotient
+        (FiniteTypeCommHopfAlgCat.baseChange (K := AlgebraicClosure k) H) I).obj)
+    (hunipotent : smoothUnipotentCommHopfAlgProperty (AlgebraicClosure k)
+      (FiniteTypeCommHopfAlgCat.quotient
+        (FiniteTypeCommHopfAlgCat.baseChange (K := AlgebraicClosure k) H) I)) :
+    I = HopfIdeal.augmentation (AlgebraicClosure k)
+      (FiniteTypeCommHopfAlgCat.baseChange (K := AlgebraicClosure k) H) :=
+  geometricNormalSubgroupFreeCommHopfAlgProperty.eq_augmentation hH I hI hconnected hunipotent
+
+/-- If the geometric fibre of a reductive group has only unipotent geometric points, its zero
+Hopf ideal is the augmentation ideal. Equivalently, the whole geometric fibre is the identity
+subgroup. -/
+theorem bot_eq_augmentation (hH : reductiveCommHopfAlgProperty k H)
+    (hunipotent : geometricallyUnipotentPointsCommHopfAlgProperty (AlgebraicClosure k)
+      (FiniteTypeCommHopfAlgCat.baseChange (K := AlgebraicClosure k) H).obj) :
+    (⊥ : HopfIdeal (AlgebraicClosure k)
+      (FiniteTypeCommHopfAlgCat.baseChange (K := AlgebraicClosure k) H)) =
+        HopfIdeal.augmentation (AlgebraicClosure k)
+          (FiniteTypeCommHopfAlgCat.baseChange (K := AlgebraicClosure k) H) := by
+  apply geometricNormalSubgroupFreeCommHopfAlgProperty.bot_eq_augmentation hH
+  rw [smoothUnipotentCommHopfAlgProperty_iff]
+  refine ⟨@Algebra.Smooth.baseChange k _ H (AlgebraicClosure k) _ _ _ _ hH.smooth, ?_⟩
+  exact (geometricallyUnipotentPointsCommHopfAlgProperty_iff (AlgebraicClosure k)
+    (FiniteTypeCommHopfAlgCat.baseChange (K := AlgebraicClosure k) H).obj).mp hunipotent
+
+/-- A reductive group whose geometric fibre has only unipotent geometric points has trivial
+geometric fibre: its coordinate Hopf algebra is bialgebra-equivalent to the algebraic closure of
+the ground field via the counit. -/
+noncomputable def geometricFiberCounitBialgEquiv
+    (hH : reductiveCommHopfAlgProperty k H)
+    (hunipotent : geometricallyUnipotentPointsCommHopfAlgProperty (AlgebraicClosure k)
+      (FiniteTypeCommHopfAlgCat.baseChange (K := AlgebraicClosure k) H).obj) :
+    FiniteTypeCommHopfAlgCat.baseChange (K := AlgebraicClosure k) H ≃ₐc[AlgebraicClosure k]
+      AlgebraicClosure k :=
+  HopfIdeal.counitBialgEquivOfAugmentationEqBot
+    (hH.bot_eq_augmentation hunipotent).symm
+
+/-- The equivalence from the geometric fibre to the algebraic closure is its counit. -/
+@[simp]
+theorem geometricFiberCounitBialgEquiv_apply
+    (hH : reductiveCommHopfAlgProperty k H)
+    (hunipotent : geometricallyUnipotentPointsCommHopfAlgProperty (AlgebraicClosure k)
+      (FiniteTypeCommHopfAlgCat.baseChange (K := AlgebraicClosure k) H).obj)
+    (x : FiniteTypeCommHopfAlgCat.baseChange (K := AlgebraicClosure k) H) :
+    hH.geometricFiberCounitBialgEquiv hunipotent x =
+      Bialgebra.counitBialgHom (AlgebraicClosure k)
+        (FiniteTypeCommHopfAlgCat.baseChange (K := AlgebraicClosure k) H) x := by
+  rw [geometricFiberCounitBialgEquiv]
+  exact HopfIdeal.counitBialgEquivOfAugmentationEqBot_apply _ _
+
+/-- The inverse equivalence from the algebraic closure is the geometric fibre's structure map. -/
+@[simp]
+theorem geometricFiberCounitBialgEquiv_symm_apply
+    (hH : reductiveCommHopfAlgProperty k H)
+    (hunipotent : geometricallyUnipotentPointsCommHopfAlgProperty (AlgebraicClosure k)
+      (FiniteTypeCommHopfAlgCat.baseChange (K := AlgebraicClosure k) H).obj)
+    (r : AlgebraicClosure k) :
+    (hH.geometricFiberCounitBialgEquiv hunipotent).symm r =
+      algebraMap (AlgebraicClosure k)
+        (FiniteTypeCommHopfAlgCat.baseChange (K := AlgebraicClosure k) H) r := by
+  rw [geometricFiberCounitBialgEquiv]
+  exact HopfIdeal.counitBialgEquivOfAugmentationEqBot_symm_apply _ _
+
+end reductiveCommHopfAlgProperty
+
+end
+
+end TauCeti

@@ -1,0 +1,152 @@
+% Section fragment. Requires amsmath, amssymb, amsthm with environments
+% theorem, lemma, remark, proof. [AM] = Algebraic Magnetism, Semigroup Forum 113 (2026).
+
+\section{Attractors along morphisms and intersections of magnets}
+
+Throughout, $S$ is a scheme, $M$ a finitely generated abelian group and $X$ an algebraic space over $S$ with an action of $D(M)_S$. We write $X^{N}_{M}$ for the attractor of a magnet $N\subset M$ as in [AM, Remark 3.4]. Let $Z$ be a finitely generated abelian group, $f\colon M\to Z$ a morphism, $Y\subset Z$ a magnet, $N=f^{-1}(Y)$; then $D(Z)_S$ acts on $X$ through $D(Z)_S\to D(M)_S$. For a scheme $T\to S$ let
+\[
+\theta\colon X^{N}_{M}(T)\to X^{Y}_{Z}(T),\qquad \varphi\mapsto\varphi\circ A(f),
+\]
+where $A(f)\colon A(Y)_T\to A(N)_T$ is dual to $f|_N$. For magnets $N,L\subset M$, with the action of [AM, Remark 3.11] on $X^N$, let
+\[
+\alpha\colon X^{N\cap L}(T)\to (X^{N})^{L}(T),\qquad h\mapsto\big((a,b)\mapsto h(ab)\big),
+\]
+where $(a,b)$ is the coordinate on $A(N)_T\times_T A(L)_T$, which is the source of the elements of $(X^N)^L(T)$ by [AM, Proposition 3.9] and Yoneda; $ab$ is the product in $A(N\cap L)_T$ of the images of $a$ and $b$. The map $\theta$ and the map $\alpha$ are natural in $T$.
+
+\begin{theorem}[Proposition 3.31(ii), separated case]\label{thm:331A}
+Assume that $S$ is separated and that $X$ is separated and locally of finite presentation over $S$. Then $\theta$ is an identification $X^{N}_{M}=X^{Y}_{Z}$.
+\end{theorem}
+
+\begin{theorem}[Proposition 3.31(ii), general case]\label{thm:331B}
+For an arbitrary algebraic space $X$ over $S$, the map $\theta$ is an identification $X^{N}_{M}=X^{Y}_{Z}$.
+\end{theorem}
+
+\begin{theorem}[Proposition 3.32(ii), separated case]\label{thm:332A}
+Assume that $S$ is separated, that $X$ is separated and locally of finite presentation over $S$, and that $X$ admits a strongly-FPR atlas [AM, Definition 6.1]. Then $\alpha$ is an identification $(X^{N})^{L}=X^{N\cap L}$.
+\end{theorem}
+
+\begin{theorem}[Proposition 3.32(ii), general case]\label{thm:332B}
+For an arbitrary algebraic space $X$ over $S$, the map $\alpha$ is an identification $(X^{N})^{L}=X^{N\cap L}$.
+\end{theorem}
+
+\begin{remark}\label{rem:atlases}
+In Theorem~\ref{thm:332A} the proof uses only an equivariant atlas that is both $N^{\times}$-FPR and $(N\cap L)^{\times}$-FPR. A strongly-FPR atlas exists for Zariski locally linearizable actions [AM, Fact 7.3]. An atlas of the required kind also exists if one of $M/N^{\times}$, $M/(N\cap L)^{\times}$ is torsion-free: [AM, Theorem 6.8(i)] gives an atlas that is FPR for the other subgroup, and it is automatically FPR for the torsion-free quotient by [AM, Proposition 6.3] applied to the group $M/N^{\times}$, respectively $M/(N\cap L)^{\times}$.
+\end{remark}
+
+\subsection{Proofs in the separated case}
+
+Write $\mathrm{ev}\colon X^{P}(T)\to X(T)$, $g\mapsto g(1)$, for evaluation at the unit of $A(P)_T$. Up to the identification of [AM, Fact 3.6], it is the map of [AM, Corollary 3.30]; thus it is injective when $X$ is separated, and $X^P$ is then a subsheaf of $X$ [AM, Proposition 3.2]. Clearly $\mathrm{ev}\circ\theta=\mathrm{ev}$ and $\mathrm{ev}\circ\alpha=\mathrm{ev}$, where on $(X^N)^L$ we evaluate twice. If $X$ is affine over $S$, then $\theta$ and $\alpha$ are bijections: the proof of [AM, Theorem 3.20] shows that $\mathrm{ev}$ identifies $X^P$ with the closed subscheme cut out by $J_P$, and [AM, Propositions 3.31(i) and 3.32(i)] compare the ideals.
+
+The results [AM, Proposition 5.1 and Theorem 8.3] used below involve Proposition 3.31(ii) only for the quotient $M\to M/N^{\times}$. For surjective $f$, in the notation of \S\ref{subsec:reductions} below, the graded ring $\mathcal{O}_T[M\times Y]$ contains a unit in each degree of $K=Z$, so the action of $D(K)_T$ is a torsor over the spectrum of the degree-zero part, and the argument of \S\ref{subsec:reductions} applies with torsor descent in place of Lemma~\ref{lem:D}. There is no circularity.
+
+\begin{proof}[Proof of Theorem~\ref{thm:331A}]
+Since $\mathrm{ev}\circ\theta=\mathrm{ev}$ and $\mathrm{ev}$ is injective on $X^{N}_{M}$, the map $\theta$ is injective.
+
+Note that $N^{\times}=f^{-1}(Y^{\times})$. By [AM, Theorem 6.8(i)], with subgroup $N^{\times}$, there is an $N^{\times}$-FPR atlas $U=\bigsqcup_a U_a\to X$ for $D(M)_S$ with $U_a$ affine over $S$. (A strongly-FPR atlas is in particular such an atlas.) The map $M/N^{\times}\to Z/Y^{\times}$ is injective, so $D(Z/Y^{\times})_S\to D(M/N^{\times})_S$ is faithfully flat of finite presentation; hence, for any $D(M)_S$-space, fixed points under the two groups coincide. With [AM, Proposition 3.35] this gives
+\[
+\bigsqcup_a U_a^{Y^{\times}}=U\times_X X^{Y^{\times}}.
+\]
+Apply [AM, Proposition 5.1(ii)] to the action of $D(Z)_S$, the magnet $Y$, its face $Y^{\times}$ and each chart $U_a$. Its proof goes through [AM, Proposition 3.37], which is available since $X$ is separated and locally of finite presentation. We get
+\[
+\bigsqcup_a U_a^{Y}=X^{Y}\times_{X^{Y^{\times}}}\bigsqcup_a U_a^{Y^{\times}}=X^{Y}\times_X U,
+\]
+so $\bigsqcup_a U_a^{Y}\to X^{Y}_{Z}$ is étale and surjective.
+
+Let $y\in X^{Y}_{Z}(T)$. There is an étale covering $\{T_i\to T\}$ such that $y|_{T_i}$ lifts to $u_i\in U_{a_i}^{Y}(T_i)$. By the affine case, $u_i=\theta(v_i)$ with $v_i\in U_{a_i}^{N}(T_i)$; let $x_i\in X^{N}_{M}(T_i)$ be the image of $v_i$ [AM, Fact 3.17]. Then $\mathrm{ev}(x_i)$ and $\mathrm{ev}(y|_{T_i})$ are both the image of $\mathrm{ev}(u_i)$ in $X(T_i)$. Thus $\mathrm{ev}(y)$ lies locally in the subsheaf $X^{N}_{M}\subset X$, hence it lies in it: $\mathrm{ev}(y)=\mathrm{ev}(x)$ with $x\in X^{N}_{M}(T)$. Then $\mathrm{ev}(\theta(x))=\mathrm{ev}(y)$, and $\theta(x)=y$ since $\mathrm{ev}$ is injective on $X^{Y}_{Z}$.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{thm:332A}]
+Let $U=\bigsqcup_a U_a\to X$ be a strongly-FPR atlas, $U_a$ affine over $S$. By [AM, Theorem 8.3], $X^{N}$ is an algebraic space, separated and locally of finite presentation over $S$. Hence $\mathrm{ev}$ embeds $(X^N)^L$ into $X^N$ and $X^N$ into $X$ as subsheaves. Since $\mathrm{ev}\circ\alpha=\mathrm{ev}$ and $\mathrm{ev}$ is injective on $X^{N\cap L}$, the map $\alpha$ is injective. As above, [AM, Proposition 5.1(ii)] and the $N^{\times}$-FPR property give
+\begin{equation}\label{eq:UN}
+\bigsqcup_a U_a^{N}=X^{N}\times_X U,\qquad U_a^{N}=X^{N}\times_{X^{N^{\times}}}U_a^{N^{\times}},
+\end{equation}
+and $U_a^{N}$ is affine over $S$ and stable under $D(M)_S$ by [AM, Theorem 3.20].
+
+The map $D(M/N^{\times})_S\times_S D(M/L^{\times})_S\to D(M/(N^{\times}\cap L^{\times}))_S$ is faithfully flat of finite presentation, because $M/(N^{\times}\cap L^{\times})\to M/N^{\times}\times M/L^{\times}$ is injective. So by [AM, Proposition 3.35], and since $N^{\times}\cap L^{\times}=(N\cap L)^{\times}$,
+\[
+(X^{N^{\times}})^{L^{\times}}=X^{(N\cap L)^{\times}},\qquad (U_a^{N^{\times}})^{L^{\times}}=U_a^{(N\cap L)^{\times}}.
+\]
+Applying [AM, Proposition 3.7(ii)] with the magnet $L^{\times}$ to the second equality of \eqref{eq:UN}, summing over $a$, and using the $(N\cap L)^{\times}$-FPR property, we obtain
+\[
+\bigsqcup_a (U_a^{N})^{L^{\times}}=(X^{N})^{L^{\times}}\times_{X^{(N\cap L)^{\times}}}\bigsqcup_a U_a^{(N\cap L)^{\times}}=(X^{N})^{L^{\times}}\times_X U.
+\]
+Now apply [AM, Proposition 5.1(ii)] to the separated, locally finitely presented space $X^{N}$, the étale equivariant charts $U_a^{N}\to X^{N}$, the magnet $L$ and its face $L^{\times}$:
+\[
+\bigsqcup_a (U_a^{N})^{L}=(X^{N})^{L}\times_{(X^{N})^{L^{\times}}}\bigsqcup_a (U_a^{N})^{L^{\times}}=(X^{N})^{L}\times_X U.
+\]
+Therefore $\bigsqcup_a (U_a^{N})^{L}\to (X^{N})^{L}$ is étale and surjective.
+
+Let $z\in (X^{N})^{L}(T)$. Étale-locally on $T$, it lifts to some $u_i\in (U_{a_i}^{N})^{L}(T_i)$, and by the affine case $u_i=\alpha(v_i)$ with $v_i\in U_{a_i}^{N\cap L}(T_i)$. The images $x_i\in X^{N\cap L}(T_i)$ of the $v_i$ satisfy $\mathrm{ev}(x_i)=\mathrm{ev}(z|_{T_i})$. Since $X^{N\cap L}$ is a subsheaf of $X$, we get $x\in X^{N\cap L}(T)$ with $\mathrm{ev}(x)=\mathrm{ev}(z)$, and $\alpha(x)=z$ by injectivity of $\mathrm{ev}$ on $(X^N)^L$.
+\end{proof}
+
+\subsection{The descent lemma}
+
+Let $T$ be a scheme, $\Gamma$ a finitely generated abelian group, and $\mathcal{A}$ a quasi-coherent $\Gamma$-graded $\mathcal{O}_T$-algebra, with degree-zero part $\mathcal{A}_0$. Put $W=\mathrm{Spec}_T\mathcal{A}$, $Q=\mathrm{Spec}_T\mathcal{A}_0$, and let $\pi\colon W\to Q$ be the projection. The group $D(\Gamma)_T$ acts on $W$ by the grading. A $T$-morphism $F\colon W\to X$ is \emph{invariant} if $F\circ\mathrm{act}=F\circ\mathrm{pr}_2$ on $D(\Gamma)_T\times_T W$. We apply this to $\mathcal{A}=\mathcal{O}_T[P]$, for a monoid $P$ with a morphism $\delta\colon P\to\Gamma$, the degree of $X^p$ being $\delta(p)$; then $\mathcal{A}_0=\mathcal{O}_T[\delta^{-1}(0)]$.
+
+\begin{lemma}\label{lem:D}
+For every algebraic space $X$ over $T$, composition with $\pi$ is a bijection from $\mathrm{Hom}_T(Q,X)$ onto the set of invariant $T$-morphisms $W\to X$.
+\end{lemma}
+
+The lemma is compatible with base change on $T$, by the injectivity. Injectivity over each open of $T$ also shows that the bijectivity is Zariski-local on $T$, so we assume $T=\mathrm{Spec}\,R$ affine, and $\mathcal{A}$ is given by a $\Gamma$-graded $R$-algebra $A$. Note that $A_0$ is a direct summand of $A$ as an $A_0$-module, and that for a morphism $A_0\to A_0'$ the ring $A'=A\otimes_{A_0}A_0'$ is $\Gamma$-graded with degree-zero part $A_0'$. Taking degree-zero parts is exact.
+
+\begin{proof}[Step 1: injectivity for $\Gamma=\mathbb{Z}^r$]
+Put $\mathbb{D}=D(\mathbb{Z}^r)_T$. We call a closed subset of $\mathrm{Spec}\,A$ \emph{stable} if its preimages under $\mathrm{act}$ and $\mathrm{pr}_2$ coincide.
+
+(a) A stable closed subset $V(\mathfrak{r})$, with $\mathfrak{r}$ radical, has $\mathfrak{r}$ homogeneous. Indeed the automorphism $(t,x)\mapsto(t,tx)$ of $\mathbb{D}\times_T\mathrm{Spec}\,A$ preserves $\mathbb{D}\times_T V(\mathfrak{r})$, which is reduced because $\mathbb{D}$ is smooth; so the coaction sends $\mathfrak{r}$ into $\mathfrak{r}[\mathbb{Z}^r]$.
+
+(b) If $I\subset A$ is a homogeneous ideal, then the image of $V(I)$ in $\mathrm{Spec}\,A_0$ is $V(I\cap A_0)$. Indeed for a prime $\mathfrak{p}\supset I\cap A_0$, the degree-zero part of $(A/I)\otimes_{A_0}\kappa(\mathfrak{p})$ is $\kappa(\mathfrak{p})\neq0$. The same holds for $A'$. In particular $\pi$ is surjective, and so is each base change of it.
+
+Let $u,v\colon Q\to X$ with $u\pi=v\pi$, and let $e\colon E\to Q$ be the equalizer, i.e.\ the pullback of $\Delta_X$. By Stacks, Tags 03KN and 03XX, $E$ is a scheme and $e$ is a separated monomorphism locally of finite type. Let $\rho\colon W\to E$ be the factorization of $\pi$; it is invariant because $e$ is a monomorphism. Let $\mathrm{Spec}\,A_0'\to Q$ be a morphism from an affine scheme, with base changes $e',\rho',\pi'$, and let $C$ be closed in $E'$. Then $\rho'^{-1}(C)$ is closed and stable, and $e'(C)=\pi'(\rho'^{-1}(C))$ because $e'$ is injective and $\pi'$ is surjective. This set is closed by (a) and (b). So $e$ is universally closed, hence a closed immersion by Stacks, Tag 04XV(6). Write $E=V(J)$. As $\pi$ factors through $E$, we have $JA=0$, and $A_0\subset A$ gives $J=0$. Hence $u=v$.
+\end{proof}
+
+\begin{proof}[Step 2: reduction to $\Gamma=\mathbb{Z}^r$]
+Choose a surjection $\mathbb{Z}^r\to\Gamma$, $z\mapsto[z]$, and put $A''=A[\mathbb{Z}^r]$, $\Gamma$-graded by $\deg(a\chi^z)=\deg a-[z]$. Its degree-zero part is $\widetilde{A}=\bigoplus_{z}A_{[z]}\chi^z$. The ring $\widetilde{A}$ is $\mathbb{Z}^r$-graded by $\widetilde{A}_z=A_{[z]}\chi^z$, and $\widetilde{A}_0=A_0$. As $A''$ has a unit in each degree, it is free over $\widetilde{A}$ and $A''\otimes_{\widetilde{A}}A''\cong A''[\Gamma]$; thus $q\colon\mathrm{Spec}\,A''\to\mathrm{Spec}\,\widetilde{A}$ is a $D(\Gamma)$-torsor and an fpqc covering. Let $\widetilde{\pi}\colon\mathrm{Spec}\,\widetilde{A}\to Q$ be the projection, $\mathrm{pr}_W\colon\mathrm{Spec}\,A''\to W$ the first projection, and $\iota\colon W\to\mathrm{Spec}\,A''$ the section $\chi^z\mapsto1$. Then $\widetilde{\pi}q=\pi\,\mathrm{pr}_W$ and $\widetilde{\pi}q\iota=\pi$.
+
+If $F$ is invariant, $F\,\mathrm{pr}_W$ is invariant for the torsor action, because $\mathrm{pr}_W$ is equivariant. So it descends to $\widetilde{F}\colon\mathrm{Spec}\,\widetilde{A}\to X$ with $\widetilde{F}q=F\,\mathrm{pr}_W$ (Stacks, Tag 0APL). The formula $a\chi^z\mapsto a\chi^z\otimes\chi^z$ defines a $D(\mathbb{Z}^r)$-action on $\mathrm{Spec}\,A''$ for which $q$ is equivariant and $\mathrm{pr}_W$ is invariant; as $q$ is an epimorphism after base change, $\widetilde{F}$ is invariant. If $\widetilde{F}=g\widetilde{\pi}$, then $F=F\,\mathrm{pr}_W\,\iota=\widetilde{F}q\iota=g\pi$. Conversely, if $u\pi=v\pi$ then $u\widetilde{\pi}q=v\widetilde{\pi}q$, so $u\widetilde{\pi}=v\widetilde{\pi}$, so $u=v$ by Step 1 for $\widetilde{A}$.
+
+From now on $\Gamma=\mathbb{Z}^r$.
+\end{proof}
+
+\begin{proof}[Step 3: an equivariant section over a strict henselization]
+Let $F$ be invariant, $\bar{q}$ a geometric point of $Q$, $B_0=\mathcal{O}^{sh}_{Q,\bar{q}}$, with maximal ideal $\mathfrak{m}$ and separably closed residue field $k$, and $B=A\otimes_{A_0}B_0$.
+
+(i) A homogeneous ideal is proper if and only if its degree-zero part lies in $\mathfrak{m}$. So $B$ has a largest proper homogeneous ideal $I$, and it contains $\mathfrak{m}B$. In $B/I$ every nonzero homogeneous element is a unit and $(B/I)_0=k$, so $B/I\cong k[\Lambda]$ for a subgroup $\Lambda\subset\mathbb{Z}^r$, which is free. Its orbit map $\mathbb{D}_k\to\mathrm{Spec}\,k[\Lambda]$ through the point $1$ is dual to the free extension $k[\Lambda]\subset k[\mathbb{Z}^r]$, thus an fpqc covering. By invariance, $F|_{V(I)}$ is therefore the composite of $V(I)\to\mathrm{Spec}\,k$ with a point $x\colon\mathrm{Spec}\,k\to X$. Since $k$ is separably closed, there are an affine scheme $U$, an étale morphism $U\to X$, and $u_0\in U(k)$ over $x$.
+
+(ii) Put $W'=W\times_X U$. By Stacks, Tags 03KN and 03XX, the map $W'\to W\times_T U$ is separated and $W'$ is a scheme; since $W\times_T U$ is affine, $W'$ is separated. The map $W'\to W$ is étale. By invariance of $F$, the formula $t\cdot(w,u)=(tw,u)$ defines an action of $\mathbb{D}$ on $W'$; the projection to $W$ is equivariant and the projection to $U$ is invariant. Over $V(I)$, the point $u_0$ gives an equivariant section $s_0$ of $W'_B\to\mathrm{Spec}\,B$. Choose a quasi-compact open $V_0$ of $W'_B$ containing $s_0(V(I))$, and let $V=\mathbb{D}\cdot V_0$. It is open, because the action map is the composite of an automorphism of $\mathbb{D}\times W'_B$ with a smooth projection; it is quasi-compact and stable. So $V\to\mathrm{Spec}\,B$ is étale, separated and of finite type.
+
+(iii) The ring $C=\Gamma(V,\mathcal{O})$ is $\mathbb{Z}^r$-graded by flat base change, and $B\to C$ is graded. Let $C'$ be the integral closure of $B$ in $C$. If $c\in C'$ has coaction $\sum_z c_z\chi^z$, this element of $C[\mathbb{Z}^r]$ is integral over $B[\mathbb{Z}^r]$. Since $B\to B[\mathbb{Z}^r]$ is smooth, Stacks, Tag 03GG gives $c_z\in C'$. So $C'$ is graded. By Stacks, Tag 03GW, the map $V\to\mathrm{Spec}\,C'$ is an open immersion; it is equivariant, as can be checked on global sections. By (a) of Step 1, its complement is $V(\mathfrak{a})$ with $\mathfrak{a}$ homogeneous.
+
+(iv) The section $s_0$ induces a graded surjection $C'\to B/I$ with kernel $\mathfrak{n}$, and $V(\mathfrak{n})=s_0(V(I))\subset V$. So $\mathfrak{a}+\mathfrak{n}=C'$, and degree-zero parts give $b\in\mathfrak{a}_0$ with $b\equiv1$ modulo $\mathfrak{n}_0$. The ring $C'_0$ is integral over $B_0$ (take degree-zero parts of monic equations), so $E=B_0[b]$ is finite over $B_0$, hence a finite product of local rings (Stacks, Tag 04GG(10)). Let $e$ be the primitive idempotent of $E$ mapping to $1$ in $C'_0/\mathfrak{n}_0=k$. Then $b$ is a unit in $eE$. Thus $D=eC'$ is graded, $\mathrm{Spec}\,D$ is open and closed in $\mathrm{Spec}\,C'$, contains $V(\mathfrak{n})$, and lies in $V$. Being open and closed in $V$, it is of finite presentation and étale over $B$; being integral too, $D$ is finite étale, hence finite locally free over $B$.
+
+The algebra $D/ID$ is finite étale over $B/I$ with section $s_0$, so $D/ID=B/I\times R''$; both factors are stable because the image of $s_0$ is, so the corresponding idempotent $e''$ has degree zero. Choose $d\in D_0$ lifting $e''$. The finite $B_0$-algebra $B_0[d]$ is a finite product of local rings, so $e''$ lifts to an idempotent $e_1\in D_0$. Replacing $D$ by $(1-e_1)D$, we get $D/ID=B/I$, and all the previous properties remain true.
+
+(v) The locus of $\mathrm{Spec}\,B$ where $D$ has rank $\neq1$ is open, closed and stable, so it is $V(J)$ with $J$ homogeneous. If $J$ were proper, then $J\subset I$ and $V(I)\subset V(J)$, contradicting $D/ID=B/I$. So $D$ has rank $1$, $B\cong D$, and we get an equivariant section $\sigma\colon\mathrm{Spec}\,B\to V\subset W'_B$.
+\end{proof}
+
+\begin{proof}[Step 4: spreading out and gluing]
+Write $B_0=\mathrm{colim}\,A_i$ with $\mathrm{Spec}\,A_i\to Q$ affine étale neighbourhoods of $\bar{q}$, and put $B_i=A\otimes_{A_0}A_i$, so that $(B_i)_0=A_i$ and $B=\mathrm{colim}\,B_i$. The composite of $\sigma$ with $W'_B\to W'$ lands in a quasi-compact open of $W'$, which is of finite presentation over $W$. So by Stacks, Tag 01ZC, $\sigma$ comes from a section $\sigma_i$ of $W'\times_W\mathrm{Spec}\,B_i\to\mathrm{Spec}\,B_i$ for some $i$. The two maps on $\mathbb{D}\times\mathrm{Spec}\,B_i$ expressing equivariance of $\sigma_i$ are sections of a separated étale morphism, so their equalizer is open and closed. Its complement is quasi-compact with empty limit, so it is empty for $i$ large. Thus $\mathrm{pr}_U\circ\sigma_i\colon\mathrm{Spec}\,B_i\to U$ is invariant with affine target: the ring map $\mathcal{O}(U)\to B_i$ has image in $A_i$. This gives $g_i\colon\mathrm{Spec}\,A_i\to U$, an $R$-morphism because $A_i\to B_i$ is injective, and we let $f_i$ be its composite with $U\to X$. By construction $f_i\circ\pi=F$ on $\mathrm{Spec}\,B_i$.
+
+As $\bar{q}$ varies, the $\mathrm{Spec}\,A_i$ form an étale covering of $Q$. On $\mathrm{Spec}\,A_i\times_Q\mathrm{Spec}\,A_j$, the maps $f_i$ and $f_j$ agree by Step 1 applied to the graded ring $A\otimes_{A_0}(A_i\otimes_{A_0}A_j)$. Since $X$ is a sheaf, they glue to $f\colon Q\to X$, and $f\pi=F$ holds on the covering $\{\mathrm{Spec}\,B_i\}$ of $W$. This proves Lemma~\ref{lem:D}.
+\end{proof}
+
+\subsection{Proofs in the general case}\label{subsec:reductions}
+
+\begin{proof}[Proof of Theorem~\ref{thm:331B}]
+Let $\psi\in X^{Y}_{Z}(T)$ and define $F\colon D(M)_T\times_T A(Y)_T\to X_T$ by $F(g,y)=g\cdot\psi(y)$. Put $K=f(M)+Y^{\mathrm{gp}}\subset Z$, $P=M\times Y$ and $\delta(m,y)=f(m)-y\in K$. Then $\mathcal{O}_T[P]$ is the algebra of $D(M)_T\times_T A(Y)_T$, its degree-zero part is $\mathcal{O}_T[\{(m,f(m)):m\in N\}]\cong\mathcal{O}_T[N]$, and the projection is $\pi(g,y)=g\cdot A(f)(y)$. For $k\in D(K)(T')$ the action is $k\star(g,y)=((k\circ f)g,\,(k|_Y)^{-1}y)$.
+
+The morphism $D(Z)_T\to D(K)_T$ is faithfully flat of finite presentation, because $\mathbb{Z}[K]\to\mathbb{Z}[Z]$ is free. So $k$ lifts fppf-locally to $z\in D(Z)(T'')$; then $z|_Y=k|_Y$ and $z\circ f=k\circ f$, and equivariance of $\psi$ gives
+\[
+F(k\star(g,y))=(k\circ f)g\cdot\psi(z^{-1}y)=(k\circ f)g\cdot(z\circ f)^{-1}\cdot\psi(y)=F(g,y).
+\]
+Since $X_T$ is an fppf sheaf, $F$ is invariant. By Lemma~\ref{lem:D} there is a unique $\varphi\colon A(N)_T\to X_T$ with $F=\varphi\circ\pi$.
+
+The map $\varphi$ is $D(M)_T$-equivariant: for $g'\in D(M)(T')$, we have $\varphi(g'\pi(g,y))=\varphi(\pi(g'g,y))=g'g\cdot\psi(y)=g'\cdot\varphi(\pi(g,y))$, and we conclude by injectivity in Lemma~\ref{lem:D} over $T'$. Moreover $\theta(\varphi)(y)=\varphi(\pi(1,y))=F(1,y)=\psi(y)$. Conversely, if $\varphi\in X^{N}_{M}(T)$ and $\psi=\theta(\varphi)$, then $F(g,y)=g\cdot\varphi(A(f)y)=\varphi(\pi(g,y))$, so the map obtained from $\psi$ is $\varphi$. Hence $\theta$ is bijective.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{thm:332B}]
+By [AM, Proposition 3.9] and Yoneda, $(X^{N})^{L}(T)$ is the set of $T$-morphisms $F\colon A(N)_T\times_T A(L)_T\to X_T$ with $F(ga,g'b)=gg'\cdot F(a,b)$ for all points $g,g'$ of $D(M)$; equivariance in $b$ is the action of [AM, Remark 3.11]. Put $\Gamma=N^{\mathrm{gp}}+L^{\mathrm{gp}}\subset M$, $P=N\times L$ and $\delta(n,l)=l-n$. The degree-zero part of $\mathcal{O}_T[N\times L]$ is $\mathcal{O}_T[\{(k,k):k\in N\cap L\}]\cong\mathcal{O}_T[N\cap L]$, the projection is $\pi(a,b)=ab$, and the action is $g\star(a,b)=(g^{-1}a,gb)$.
+
+The morphism $D(M)_T\to D(\Gamma)_T$ is faithfully flat of finite presentation. Lifting $g\in D(\Gamma)(T')$ fppf-locally to $\tilde{g}\in D(M)(T'')$, we get $F(\tilde{g}^{-1}a,\tilde{g}b)=\tilde{g}^{-1}\tilde{g}\cdot F(a,b)=F(a,b)$, so $F$ is invariant. By Lemma~\ref{lem:D} there is a unique $h\colon A(N\cap L)_T\to X_T$ with $F=h\circ\pi$. It is equivariant: for $g\in D(M)(T')$, $h(g\pi(a,b))=h(\pi(ga,b))=F(ga,b)=g\cdot h(\pi(a,b))$, and we conclude by injectivity in Lemma~\ref{lem:D} over $T'$. Thus $h\in X^{N\cap L}(T)$.
+
+Conversely, for $h\in X^{N\cap L}(T)$, the morphism $\alpha(h)=h\circ\pi$ satisfies $h(gg'\,ab)=gg'\cdot h(ab)$ for points $g,g'$ of $D(M)$, so it belongs to $(X^{N})^{L}(T)$. The two assignments are mutually inverse by Lemma~\ref{lem:D}.
+\end{proof}

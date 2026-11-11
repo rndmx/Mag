@@ -1,0 +1,6 @@
+*.ilean
+*.olean
+.build*
+.lake/
+.sparse.bak
+.stubtargets.bak

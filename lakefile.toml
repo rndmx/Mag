@@ -1,0 +1,23 @@
+name = "AlgMag"
+version = "0.1.0"
+defaultTargets = ["AlgMag"]
+
+[leanOptions]
+pp.unicode.fun = true
+autoImplicit = false
+relaxedAutoImplicit = false
+maxSynthPendingDepth = 3
+
+[[require]]
+name = "Stacks"
+git = "https://github.com/AxiomMath/Stacks"
+rev = "012108f61d7f92a6ffc35ec3f263b6da5d438125"
+
+[[lean_lib]]
+name = "AlgMag"
+roots = ["AlgMag", "AlgMagBuilt"]
+
+[[lean_lib]]
+name = "TauCeti"
+roots = ["TauCeti"]
+leanOptions = { autoImplicit = true, relaxedAutoImplicit = true, maxSynthPendingDepth = 1 }
